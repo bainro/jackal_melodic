@@ -1,5 +1,5 @@
 # jackal_melodic
-Setup ROS melodic:
+Setup ROS melodic on Ubunutu 18.04:
 
 ```./setup_melodic.sh```
 
