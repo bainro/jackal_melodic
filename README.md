@@ -9,7 +9,7 @@ See here for more details: [Link](http://wiki.ros.org/melodic/Installation/Ubunt
 ### Run clearpath jackal in gazebo simulation:
 
 ```
-sudo apt-get install --yes ros-melodic-jackal-simulator
+sudo apt-get install --yes ros-melodic-jackal-simulator ros-melodic-jackal-msgs
 roslaunch jackal_gazebo empty_world.launch &
 rviz -d ./robot.rviz
 ```
