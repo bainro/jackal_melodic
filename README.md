@@ -16,4 +16,4 @@ sudo apt-get install --yes ros-melodic-jackal-simulator
 
 Clearpath melodic ROS cheatsheet: [Link](https://www.generationrobots.com/media/ROS_Cheat_Sheet_Melodic.pdf).
 
-https://answers.ros.org/question/39657/importerror-no-module-named-rospkg/?answer=252335#post-id-252335
+If you get python errors about certain packages not being found, yet you're sure they're installed, it could be an issue with the bash variable ```PYTHONPATH```, the version of python being found ```python -V```, or it can be sometimes be resolved by installing with pip instead of apt-get. Eg ```pip3 install rospkg```.
