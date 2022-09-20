@@ -9,8 +9,7 @@ See here for more details: [Link](http://wiki.ros.org/melodic/Installation/Ubunt
 ### Run clearpath jackal in gazebo simulation:
 
 ```
-sudo apt-get install --yes ros-noetic-jackal-simulator
-
+sudo apt-get install --yes ros-melodic-jackal-simulator
 ```
 
 ### Misc:
