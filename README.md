@@ -8,6 +8,11 @@ See here for more details: [Link](http://wiki.ros.org/melodic/Installation/Ubunt
 
 ### Run clearpath jackal in gazebo simulation:
 
+```
+sudo apt-get install --yes ros-noetic-jackal-simulator
+
+```
+
 ### Misc:
 
 Clearpath melodic ROS cheatsheet: [Link](https://www.generationrobots.com/media/ROS_Cheat_Sheet_Melodic.pdf).
