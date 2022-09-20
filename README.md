@@ -11,7 +11,7 @@ See here for more details: [Link](http://wiki.ros.org/melodic/Installation/Ubunt
 ```
 sudo apt-get install --yes ros-melodic-jackal-simulator
 roslaunch jackal_gazebo empty_world.launch &
-roslaunch jackal_viz view_robot.launch
+rviz -d ./robot.rviz
 ```
 
 ### Misc:
