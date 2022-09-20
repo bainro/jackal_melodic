@@ -1,2 +1,2 @@
 # jackal_melodic
-Setup ROS &amp; clearpath tutorials
+Setup ROS meldoic & run clearpath jackal in gazebo simulation
