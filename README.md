@@ -27,6 +27,8 @@ rviz -d ./robot.rviz
 ```
 
 Clearpath melodic ROS cheatsheet: [Link](https://www.generationrobots.com/media/ROS_Cheat_Sheet_Melodic.pdf).
+Clearpath ROS tutorials: [Link](https://www.clearpathrobotics.com/assets/guides/melodic/ros/index.html).
+Clearpath Jackal tutorials: [Link](https://www.clearpathrobotics.com/assets/guides/melodic/jackal/index.html).
 
 #### Left off:
 ```
