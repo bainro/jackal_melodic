@@ -10,8 +10,8 @@ See here for more details: [Link](http://wiki.ros.org/melodic/Installation/Ubunt
 
 ```
 sudo apt-get install --yes ros-melodic-jackal-simulator ros-melodic-jackal-desktop ros-melodic-jackal-navigation
-roslaunch jackal_gazebo jackal_world.launch config:=front_laser
-roslaunch jackal_viz view_robot.launch
+roslaunch jackal_gazebo jackal_world.launch config:=front_laser &
+roslaunch jackal_viz view_robot.launch &
 ```
 
 ### Misc:
