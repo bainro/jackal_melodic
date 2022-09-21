@@ -9,14 +9,22 @@ See here for more details: [Link](http://wiki.ros.org/melodic/Installation/Ubunt
 ### Run clearpath jackal in gazebo simulation:
 
 ```
-sudo apt-get install --yes ros-melodic-jackal-simulator ros-melodic-jackal-msgs
-roslaunch jackal_gazebo empty_world.launch &
-rviz -d ./robot.rviz
+sudo apt-get install --yes ros-melodic-jackal-simulator ros-melodic-jackal-desktop ros-melodic-jackal-navigation
+roslaunch jackal_gazebo jackal_world.launch config:=front_laser
+roslaunch jackal_viz view_robot.launch
 ```
 
 ### Misc:
 
 If you get python errors about certain packages not being found, yet you're sure they're installed, it could be an issue with the bash variable ```PYTHONPATH```, the version of python being found ```python -V```, or it can be sometimes be resolved by installing with pip instead of apt-get. Eg ```pip3 install rospkg```.
+
+The steps for installing ROS noetic on Ubuntu 20.04 are very similar. Mostly just replacing "melodic" with "noetic" in the apt install commands (including in the BASH scripts). robot.rviz exists for the noetic installation, since as of the time this document was written ros-noetic-jackal-desktop was not installable via apt. For noetic then, do something like this to install and run the simulation:
+
+```
+sudo apt install --yes ros-noetic-jackal-simulator ros-noetic-jackal-desktop ros-noetic-jackal-navigation
+roslaunch jackal_gazebo empty_world.launch &
+rviz -d ./robot.rviz
+```
 
 Clearpath melodic ROS cheatsheet: [Link](https://www.generationrobots.com/media/ROS_Cheat_Sheet_Melodic.pdf).
 
