@@ -21,4 +21,9 @@ If you get python errors about certain packages not being found, yet you're sure
 Clearpath melodic ROS cheatsheet: [Link](https://www.generationrobots.com/media/ROS_Cheat_Sheet_Melodic.pdf).
 
 #### Left off:
-self.heading relies on the IMU's magnetometer data, which gazebo does not have || emulate. So for simulation would need something different for heading, or might be able to debug with heading set manually.
+```
+rostopic echo imu/data
+x, y, z, w = orientation
+roll, pitch, yaw = tf.transformations.euler_from_quaternion([x, y, z, w])
+# can use yaw for heading substitute, since real bot get's it from magnetometer
+```
