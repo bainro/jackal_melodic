@@ -29,11 +29,3 @@ rviz -d ./robot.rviz
 Clearpath melodic ROS cheatsheet: [Link](https://www.generationrobots.com/media/ROS_Cheat_Sheet_Melodic.pdf).<br/>
 Clearpath ROS tutorials: [Link](https://www.clearpathrobotics.com/assets/guides/melodic/ros/index.html).<br/>
 Clearpath Jackal tutorials: [Link](https://www.clearpathrobotics.com/assets/guides/melodic/jackal/index.html).
-
-#### Left off:
-```
-rostopic echo imu/data
-x, y, z, w = orientation
-roll, pitch, yaw = tf.transformations.euler_from_quaternion([x, y, z, w])
-# can use yaw for heading substitute, since real bot get's it from magnetometer
-```
