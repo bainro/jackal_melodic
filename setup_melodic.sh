@@ -1,5 +1,5 @@
 #/bin/bash
-if [ $(lsb_release -sc) != "focal" ]; then 
+if [ $(lsb_release -sc) != "bionic" ]; then 
 	echo "Error: Ubuntu 18.04 is required for ROS melodic."
 	exit
 fi
