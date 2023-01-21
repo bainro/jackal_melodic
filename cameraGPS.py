@@ -2,12 +2,14 @@
 # from PIL import Image
 import cv2
 import time
+from datetime import datetime
 import rospy
 import sys
 import copy
 import time
 import numpy as np
 import tf
+import os
 from os.path import exists
 from geometry_msgs.msg import Twist
 from jackal_msgs.msg import Feedback, Status
@@ -38,12 +40,14 @@ class JackalController:
 
 		self.bridge = CvBridge()
                 # @TODO remove hardcoded camera size, ok assumption for jackal...
-		self.cv2_vid = cv2.VideoWriter('test.avi', cv2.VideoWriter_fourcc(*'DIVX'), 25, (1536, 1024))
 
+                start_time = datetime.now() # current date and time
+                dir_name = "recordings/%s/" % start_time.strftime("%m_%d_%Y%_H_%M_%S")
+                os.makedirs(dir_name)
+		self.cv2_vid = cv2.VideoWriter(dir_name + 'video.avi', cv2.VideoWriter_fourcc(*'DIVX'), 25, (1536, 1024))
+                self.frame_log = open(dir_name + "frame_log.txt", "w")
+                self.gps_log = open(dir_name + "gps_log.txt", "w")
 
-	"""Imu methods"""
-
-	"""GPS Related methods"""
 
 	def createGpsListener(self):
 		"""
@@ -55,10 +59,12 @@ class JackalController:
 		"""
 		Callback to handle GPS data upon arrival
 		"""
+                print("GPS read")
 		self.longitude = data.longitude
 		self.latitude = data.latitude
 		self.altitude = data.altitude
-		self.gps_readings.append([data.header.stamp.secs, self.longitude, self.latitude, self.altitude])
+		# self.gps_readings.append([data.header.stamp.secs, self.longitude, self.latitude, self.altitude])
+                self.gps_log.write("time: %r, lat: %r, long: %r, alt: %r\n" %(data.header.stamp.secs, data.latitude, data.longitude, data.altitude))
 
 	def createCameraListener(self):
 		"""
@@ -70,9 +76,11 @@ class JackalController:
 		"""
 		Callback to handle Camera data upon arrival
 		"""
-		# timestamp = data.header.stamp.secs
+                print("Grabed frame")
+		timestamp = data.header.stamp.secs
 		img = self.bridge.imgmsg_to_cv2(data, 'bgr8')
                 self.cv2_vid.write(img)
+                self.frame_log.write(str(timestamp) + "\n")
 
 
 	def saveGPS(self):
@@ -90,6 +98,9 @@ class JackalController:
 		Stops all nodes. Saves GPS.
 		"""
 		self.gpsnode.unregister()
+                self.cv2_vid.release()
+		self.frame_log.close()
+		self.gps_log.close()
 
 	def awaitReadings(self):
 		"""
@@ -102,14 +113,18 @@ class JackalController:
 		print("Done")
 
 
+
 if __name__ == '__main__':
 	try:
 		rospy.init_node('controller', anonymous=True)
 		controller = JackalController()
-		controller.awaitReadings()
-		for _ in range(20):
-			time.sleep(.1)
-                controller.cv2_vid.release()
+		# controller.awaitReadings()
+		while True:
+			try:
+				time.sleep(.1)
+			except KeyboardInterrupt:
+				print("interuppted")
+		    		break
 		controller.unregisterAll()
 
 	except rospy.ROSInterruptException:
