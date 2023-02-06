@@ -27,8 +27,8 @@ dx_max = max(dx_between_pts)
 print("max: ", dx_max, " min: ", dx_min) 
 dx_sorted = np.sort(dx_between_pts)
 plt.plot(dx_sorted)
-assert dx_between_pts[0] == dx_min, f"{dx_between_pts[0]} != {dx_min}"
-assert dx_between_pts[-1] == dx_max, f"{dx_between_pts[-1]} != {dx_max}"
+assert dx_sorted[0] == dx_min, f"{dx_sorted[0]} != {dx_min}"
+assert dx_sorted[-1] == dx_max, f"{dx_sorted[-1]} != {dx_max}"
 plt.show()
 
 '''
