@@ -25,7 +25,7 @@ with open('2_2_23_gps.csv', mode ='r') as f:
 dx_min = min(dx_between_pts)
 dx_max = max(dx_between_pts)
 print("max: ", dx_max, " min: ", dx_min) 
-dx_between_pts.sort()
+dx_between_pts = sorted(dx_between_pts, key=float)
 plt.plot(dx_between_pts)
 assert dx_between_pts[0] == dx_min, f"{dx_between_pts[0]} != {dx_min}"
 assert dx_between_pts[-1] == dx_max, f"{dx_between_pts[-1]} != {dx_max}"
