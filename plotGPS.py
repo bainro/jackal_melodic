@@ -46,7 +46,7 @@ for track in gpx.tracks:
     for segment in track.segments:
         for point in segment.points:
             print('Point at ({0},{1}) -> {2}'.format(point.latitude, point.longitude, point.elevation))
-
+print(len(gpx.tracks))
 
 '''
 # Creating histogram
