@@ -50,7 +50,7 @@ dx_between_pts = []
 for track in gpx.tracks:
   for segment in track.segments:
     for point in segment.points:
-      lat, long = float(line[1]), float(line[2])
+      lat, long = point.latitude, point.longitude
       if prev_lat != 0:
         dlat = lat - prev_lat
         dlong = long - prev_long
