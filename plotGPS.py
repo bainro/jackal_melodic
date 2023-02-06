@@ -23,9 +23,9 @@ with open('2_2_23_gps.csv', mode ='r') as f:
     prev_long = long
           
 print("max: ", max(dx_between_pts), " min: ", min(dx_between_pts)) 
-dx_between_pts.sort()
-print(dx_between_pts)
 plt.plot(dx_between_pts)
+dx_sorted = dx_between_pts.sort()
+plt.plot(dx_sorted)
 plt.show()
 
 '''
