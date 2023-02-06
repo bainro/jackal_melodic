@@ -29,6 +29,6 @@ fig, ax = plt.subplots(figsize = (10, 7))
 min_dx = min(dx_between_pts)
 max_dx = max(dx_between_pts)
 bin_width = max_dx - min_dx
-ax.hist(dx_between_pts, bins = np.arang(min_dx, max_dx, bin_width))
+ax.hist(dx_between_pts, bins = np.arange(min_dx, max_dx, bin_width))
 # Show plot
 plt.show()
