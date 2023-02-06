@@ -19,7 +19,7 @@ with open('2_2_23_gps.csv', mode ='r') as f:
       dlat = lat - prev_lat
       dlong = long - prev_long
       dx = (dlat**2 + dlong**2) ** .5
-      if !math.isnan(dx):
+      if not math.isnan(dx):
         dx_between_pts.append(dx)
     prev_lat = lat
     prev_long = long
