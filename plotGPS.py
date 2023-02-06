@@ -42,11 +42,30 @@ import gpxpy.gpx
 gpx_file = open('phone_gps.gpx', 'r')
 gpx = gpxpy.parse(gpx_file)
 
+prev_lat, prev_long = 0, 0
+
+dx_between_pts = []
 for track in gpx.tracks:
-    for segment in track.segments:
-        for point in segment.points:
-            print('Point at ({0},{1}) -> {2}'.format(point.latitude, point.longitude, point.elevation))
-print(len(gpx.tracks))
+  for segment in track.segments:
+    for point in segment.points:
+      lat, long = float(line[1]), float(line[2])
+      if prev_lat != 0:
+        dlat = lat - prev_lat
+        dlong = long - prev_long
+        dx = (dlat**2 + dlong**2) ** .5
+        if not math.isnan(dx):
+          dx_between_pts.append(dx)
+      prev_lat = lat
+      prev_long = long      
+
+dx_min = min(dx_between_pts)
+dx_max = max(dx_between_pts)
+print("max: ", dx_max, " min: ", dx_min) 
+dx_sorted = np.sort(dx_between_pts)
+plt.plot(dx_sorted)
+assert dx_sorted[0] == dx_min, f"{dx_sorted[0]} != {dx_min}"
+assert dx_sorted[-1] == dx_max, f"{dx_sorted[-1]} != {dx_max}"
+plt.show()
 
 '''
 # Creating histogram
