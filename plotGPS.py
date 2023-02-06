@@ -23,7 +23,11 @@ with open('2_2_23_gps.csv', mode ='r') as f:
     prev_long = long
           
 print("max: ", max(dx_between_pts), " min: ", min(dx_between_pts)) 
-      
+
+plt.plot(dx_between_pts.sort())
+plt.show()
+
+'''
 # Creating histogram
 fig, ax = plt.subplots(figsize = (10, 7))
 min_dx = min(dx_between_pts)
@@ -32,3 +36,4 @@ bin_width = (max_dx - min_dx) / 5
 ax.hist(dx_between_pts, bins = np.arange(min_dx, max_dx, bin_width))
 # Show plot
 plt.show()
+'''
