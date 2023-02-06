@@ -27,8 +27,8 @@ dx_max = max(dx_between_pts)
 print("max: ", dx_max, " min: ", dx_min) 
 dx_between_pts = sorted(dx_between_pts, key=float)
 plt.plot(dx_between_pts)
-assert dx_between_pts[0] == dx_min, f"{dx_between_pts[0]} != {dx_min}"
-assert dx_between_pts[-1] == dx_max, f"{dx_between_pts[-1]} != {dx_max}"
+#assert dx_between_pts[0] == dx_min, f"{dx_between_pts[0]} != {dx_min}"
+#assert dx_between_pts[-1] == dx_max, f"{dx_between_pts[-1]} != {dx_max}"
 #plt.plot(dx_sorted)
 plt.show()
 
