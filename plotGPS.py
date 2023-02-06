@@ -19,10 +19,8 @@ with open('2_2_23_gps.csv', mode ='r') as f:
       dlat = lat - prev_lat
       dlong = long - prev_long
       dx = (dlat**2 + dlong**2) ** .5
-      dx_between_pts.append(dx)
-      if math.isnan(dx):
-        print("dx is nan...", " lat: ", lat, " long: ", long, " prev_lat: ", prev_lat, " prev_long: ", prev_long)
-        exit()
+      if !math.isnan(dx):
+        dx_between_pts.append(dx)
     prev_lat = lat
     prev_long = long
           
@@ -30,7 +28,6 @@ dx_min = min(dx_between_pts)
 dx_max = max(dx_between_pts)
 print("max: ", dx_max, " min: ", dx_min) 
 dx_sorted = np.sort(dx_between_pts)
-print("number of NaN's: " + str(np.count_nonzero(np.isnan(dx_sorted))))
 plt.plot(dx_sorted)
 assert dx_sorted[0] == dx_min, f"{dx_sorted[0]} != {dx_min}"
 assert dx_sorted[-1] == dx_max, f"{dx_sorted[-1]} != {dx_max}"
