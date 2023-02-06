@@ -1,5 +1,6 @@
 # Debugging script to see how much GPS signal bounced around
 import csv
+import numpy as np
 from matplotlib import pyplot as plt
 
 # distance between points
@@ -21,11 +22,13 @@ with open('2_2_23_gps.csv', mode ='r') as f:
     prev_lat = lat
     prev_long = long
           
+print("max: ", max(dx_between_pts), " min: ", min(dx_between_pts)) 
+      
 # Creating histogram
-fig, ax = plt.subplots(figsize =(10, 7))
-ax.hist(dx_between_pts, bins = [0, 25, 50, 75, 100])
-
-print("max: ", max(dx_between_pts), " min: ", min(dx_between_pts))
-
+fig, ax = plt.subplots(figsize = (10, 7))
+min_dx = min(dx_between_pts)
+max_dx = max(dx_between_pts)
+bin_width = max_dx - min_dx
+ax.hist(dx_between_pts, bins = np.linspace(min_dx, bin_width, max_dx))
 # Show plot
 plt.show()
