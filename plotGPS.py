@@ -9,8 +9,7 @@ prev_lat, prev_long = 0, 0
 with open('2_2_23_gps.csv', mode ='r') as f:
   csv_f = csv.reader(f)
   for line in csv_f:
-    lat, long = line[1:3]
-    print(lat,long)
+    lat, long = float(line[1]), float(line[2])
     if prev_lat != 0:
       dlat = lat - prev_lat
       dlong = long - prev_long
