@@ -22,11 +22,13 @@ with open('2_2_23_gps.csv', mode ='r') as f:
     prev_lat = lat
     prev_long = long
           
-print("max: ", max(dx_between_pts), " min: ", min(dx_between_pts)) 
+dx_min = min(dx_between_pts)
+dx_max = max(dx_between_pts)
+print("max: ", dx_max, " min: ", dx_min) 
 dx_between_pts.sort()
 plt.plot(dx_between_pts)
-assert dx_between_pts[0] == min(dx_between_pts)
-assert dx_between_pts[-1] == max(dx_between_pts)
+assert dx_between_pts[0] == dx_min, f"{dx_between_pts[0]} != {dx_min}"
+assert dx_between_pts[-1] == dx_max, f"{dx_between_pts[-1]} != {dx_max}"
 #plt.plot(dx_sorted)
 plt.show()
 
