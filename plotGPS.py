@@ -4,6 +4,7 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 
+'''
 # distance between points
 dx_between_pts = []
 
@@ -32,6 +33,7 @@ plt.plot(dx_sorted)
 assert dx_sorted[0] == dx_min, f"{dx_sorted[0]} != {dx_min}"
 assert dx_sorted[-1] == dx_max, f"{dx_sorted[-1]} != {dx_max}"
 plt.show()
+'''
 
 #################
 ### Phone GPS ###
