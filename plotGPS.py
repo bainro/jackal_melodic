@@ -19,6 +19,9 @@ with open('2_2_23_gps.csv', mode ='r') as f:
       dlong = long - prev_long
       dx = (dlat**2 + dlong**2) ** .5
       dx_between_pts.append(dx)
+      if dx == nan:
+        print("dx is nan...", " lat: ", lat, " long: ", long, " prev_lat: ", prev_lat, " prev_long: ", prev_long)
+        exit()
     prev_lat = lat
     prev_long = long
           
