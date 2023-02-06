@@ -33,6 +33,21 @@ assert dx_sorted[0] == dx_min, f"{dx_sorted[0]} != {dx_min}"
 assert dx_sorted[-1] == dx_max, f"{dx_sorted[-1]} != {dx_max}"
 plt.show()
 
+#################
+### Phone GPS ###
+#################
+import gpxpy
+import gpxpy.gpx
+
+gpx_file = open('phone_gps.gpx', 'r')
+gpx = gpxpy.parse(gpx_file)
+
+for track in gpx.tracks:
+    for segment in track.segments:
+        for point in segment.points:
+            print('Point at ({0},{1}) -> {2}'.format(point.latitude, point.longitude, point.elevation))
+
+
 '''
 # Creating histogram
 fig, ax = plt.subplots(figsize = (10, 7))
