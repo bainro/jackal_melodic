@@ -37,16 +37,20 @@ class JackalController:
 
 		self.createGpsListener()
 		self.createCameraListener()
+		self.createImuListener()
 
 		self.bridge = CvBridge()
-                # @TODO remove hardcoded camera size, ok assumption for jackal...
+		# @TODO remove hardcoded camera size, ok assumption for jackal...
 
-                start_time = datetime.now() # current date and time
-                dir_name = "recordings/%s/" % start_time.strftime("%m_%d_%Y%_H_%M_%S")
-                os.makedirs(dir_name)
+		start_time = datetime.now() # current date and time
+		dir_name = "recordings/%s/" % start_time.strftime("%m_%d_%Y%_H_%M_%S")
+		os.makedirs(dir_name)
 		self.cv2_vid = cv2.VideoWriter(dir_name + 'video.avi', cv2.VideoWriter_fourcc(*'DIVX'), 25, (1536, 1024))
-                self.frame_log = open(dir_name + "frame_log.txt", "w")
-                self.gps_log = open(dir_name + "gps_log.txt", "w")
+		self.frame_log = open(dir_name + "frame_log.txt", "w")
+		self.gps_log = open(dir_name + "gps_log.txt", "w")
+		self.gps_log.write("time,lat,long,alt\n")
+		self.imu_log = open(dir_name + "imu_log.txt", "w")
+		self.imu_log.write("time,qx,qy,qz,qw\n")
 
 
 	def createGpsListener(self):
@@ -59,12 +63,12 @@ class JackalController:
 		"""
 		Callback to handle GPS data upon arrival
 		"""
-                print("GPS read")
 		self.longitude = data.longitude
 		self.latitude = data.latitude
 		self.altitude = data.altitude
+		print("%r, %r, %r\n" %(data.latitude, data.longitude, data.altitude))
 		# self.gps_readings.append([data.header.stamp.secs, self.longitude, self.latitude, self.altitude])
-                self.gps_log.write("time: %r, lat: %r, long: %r, alt: %r\n" %(data.header.stamp.secs, data.latitude, data.longitude, data.altitude))
+		self.gps_log.write("%r,%r,%r,%r\n" %(data.header.stamp.secs, data.latitude, data.longitude, data.altitude))
 
 	def createCameraListener(self):
 		"""
@@ -82,7 +86,14 @@ class JackalController:
                 self.cv2_vid.write(img)
                 self.frame_log.write(str(timestamp) + "\n")
 
+	def createImuListener(self):
+		self.imunode = rospy.Subscriber('imu/data', Imu, self.updateImu)
 
+	def updateImu(self, data):
+		q = data.orientation
+		self.imu_log.write("%r,%r,%r,%r,%r\n" %(data.header.stamp.secs, q.x, q.y, q.z, q.w))
+
+	'''
 	def saveGPS(self):
 		"""
 		Saves all GPS data into csv
@@ -91,6 +102,7 @@ class JackalController:
 		timestamp = time.strftime("%b-%d-%Y_%H%M%S", t)
 		np.savetxt("gps-" + timestamp + '.csv', self.gps_readings, delimiter=',')
 		np.savetxt("costdata-" + timestamp + '.csv', self.pathdata, delimiter=',')
+	'''
 
 
 	def unregisterAll(self):
@@ -101,6 +113,7 @@ class JackalController:
                 self.cv2_vid.release()
 		self.frame_log.close()
 		self.gps_log.close()
+		self.imu_log.close()
 
 	def awaitReadings(self):
 		"""
@@ -124,7 +137,7 @@ if __name__ == '__main__':
 				time.sleep(.1)
 			except KeyboardInterrupt:
 				print("interuppted")
-		    		break
+				break
 		controller.unregisterAll()
 
 	except rospy.ROSInterruptException:
