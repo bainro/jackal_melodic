@@ -41,6 +41,8 @@ class JackalController:
         self.statusdata = None
         self.headingdata = None
         self.gpsdata = None
+        # used to speedup calibration
+        self.last_heading_i = 0
         self.has_calibrated = False
 
         if lidar:
@@ -175,12 +177,12 @@ class JackalController:
 
         # only use the calibration lists after calibration
         if self.has_calibrated:
-            # can speed this search up by retaining the last found index and searching 
-            # relative to that next time we update the heading
-            for i, v in enumerate(self.uncalib_i):
+            start_i = max(0, self.last_heading_i - 30)
+            for i, v in enumerate(self.uncalib_i[start_i:]):
                 if v < yaw:
                     continue
                 yaw = self.calib_o[i]
+                self.last_heading_i = i
                 break
 
         self.heading = yaw
