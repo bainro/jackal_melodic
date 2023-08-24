@@ -181,8 +181,8 @@ class JackalController:
             for i, v in enumerate(self.uncalib_i[start_i:]):
                 if v < yaw:
                     continue
-                yaw = self.calib_o[i]
-                self.last_heading_i = i
+                yaw = self.calib_o[i+start_i]
+                self.last_heading_i = i+start_i
                 break
 
         self.heading = yaw
