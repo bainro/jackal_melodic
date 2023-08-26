@@ -13,8 +13,7 @@ class S(BaseHTTPRequestHandler):
         post_data = self.rfile.read(content_length)
         lat_long = post_data.decode("utf-8").split("&")
         lat, long = lat_long[0], lat_long[1]
-        print(f'lat: {lat}')
-        print(f'long: {long}')
+        print(f'lat, long: ({lat}, {long}) \n ')
         self._set_response()
 
 def run(server_class=HTTPServer, handler_class=S, port=80):
@@ -28,5 +27,4 @@ def run(server_class=HTTPServer, handler_class=S, port=80):
     httpd.server_close()
 
 if __name__ == '__main__':
-    from sys import argv
     run()
