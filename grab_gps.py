@@ -11,9 +11,11 @@ class S(BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
-        lat_long = post_data.decode("utf-8").split("&")
-        lat, long = lat_long[0], lat_long[1]
-        print(f'lat, long: ({lat}, {long}) \n ')
+        fone_data = post_data.decode("utf-8").split("&")
+        lat, long, acc = fone_data
+        print(f'lat: {lat}')
+        print(f'long: {long}')
+        print(f'acc: {acc}')
         self._set_response()
 
 def run(server_class=HTTPServer, handler_class=S, port=80):
