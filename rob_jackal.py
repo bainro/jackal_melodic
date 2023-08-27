@@ -1,12 +1,18 @@
 import os
 import tf
 import time
+import math
 import rospy
+import pickle
 import numpy as np
+from std_msgs.msg import Float32
 from nav_msgs.msg import Odometry
+from placecell import PlaceNetwork
 from jackal_msgs.msg import Feedback
 from geometry_msgs.msg import Twist, PoseStamped
-from sensor_msgs.msg import NavSatFix, LaserScan, Imu, MagneticField
+from actionlib_msgs.msg import GoalStatusArray, GoalStatus
+from sensor_msgs.msg import LaserScan, Imu, MagneticField, NavSatFix
+
 
 class JackalController:
     """
@@ -23,12 +29,19 @@ class JackalController:
                  gps = True,
                  gpstopic = 'navsat/fix',
                  odom = True,
-                 odomtopic = 'odometry/filtered'):
+                 odomtopic = 'odometry/filtered',
+                 gps_acc_topic = '/fone_gps/acc'):
         
         # Creates publisher for making drive commands
         self.createSimpleDriver() 
         # Creates publisher for making goal commands
         self.createGoalPublisher() 
+        self.createGoalStatusListener()
+        # hard-coded since no behavior conditions on it yet
+        self.createGPSaccListener(gps_acc_topic) 
+        self.gps_acc = math.nan
+        self.moving = False
+        self.curstatus = GoalStatus.SUCCEEDED
 
         rospy.init_node('controller', anonymous=True)
         self.rate = rospy.Rate(10)
@@ -47,14 +60,34 @@ class JackalController:
 
         if lidar:
             self.createLidarListener(lidartopic)
+            self.lidartopic = lidartopic
         if status:
             self.createStatusListener(statustopic)
+            self.statustopic = statustopic
         if heading:
             self.createHeadingListener(headingtopic)
+            self.headingtopic = headingtopic
         if gps:
-            self.createGpsListner(gpstopic)
+            self.createGpsListener(gpstopic)
+            self.gpstopic = gpstopic
+            self.gps_acc_topic = gps_acc_topic
         if odom:
             self.createOdomListener(odomtopic)
+            self.odomtopic = odomtopic
+
+    def rosbag(self, record=True):
+        # Records rosbag for offline analysis. 
+        
+        # start recording
+        if record:
+            self.bag_file = f'{int(time.time())}' + '.bag'
+            # @TODO don't hard-code the wifi topic
+            bash_cmd = f'rosbag record -O {self.bag_file} {self.lidartopic} {self.statustopic} {self.headingtopic} '
+            bash_cmd += f'{self.gpstopic} {self.odomtopic} {self.gps_acc_topic} /wifi_strength &' # background
+            os.system(bash_cmd)
+        else:
+            # try stopping any already running rosbag recordings
+            os.system(f'kill $(pgrep -f "rosbag record -O {self.bag_file}")')
 
     def createSimpleDriver(self):
         """
@@ -94,6 +127,41 @@ class JackalController:
         msg = self.makeTwist(linear, 0, 0, 0, 0, rotational)
         self.drivernode.publish(msg)
 
+
+    def driveToWaypoint(self, latitude, longitude):
+        """
+        Drives Jackal to the coordinates. Returns a tuple (bool, float). bool is true for successfully reaching false for unsuccessful, float is the cost.
+        latitude, longitude: coordinates
+        """
+        #self.turnToWaypoint(latitude, longitude)
+
+		#Start tracking cost after turning to directionb
+        ang, dist = self.getAngleDistance((self.latitude, self.longitude), (latitude, longitude))
+        while dist > 0.75:
+            self.driveToward(ang, dist)
+            print("Distance to waypoint " + str(dist) + " | Heading " + str(self.heading) + " Angle to bearing: " + str(ang))
+            ang, dist = self.getAngleDistance((self.latitude, self.longitude), (latitude, longitude))
+
+    def driveToward(self, angle, dist):
+        """
+        Issues a single command toward the desired angle, returns distance 
+        """
+        padding = np.pi/12
+        #if self.blocked:
+            #self.Drive(self.drivespeed, self.blockdir * self.maxturnspeed)
+        #    self.avoidancetime += 1
+        #else:
+        if self.heading < angle - padding:
+            self.Drive(0.0, 0.5)
+        elif self.heading > angle  + padding:					
+            self.Drive(0.0, -0.5)
+        else:
+            self.Drive(0.5, 0)
+
+        #self.drivetime += 1
+        self.rate.sleep()
+
+    ###MOVE BASE####
     def createGoalPublisher(self):
         """
         Creates publisher for making goal commands
@@ -114,10 +182,10 @@ class JackalController:
         msg.pose.position.y = y
         msg.pose.position.z = self.odomdata.pose.pose.position.z
         
-        msg.pose.orientation.x = self.odomdata.pose.pose.orientation.x
-        msg.pose.orientation.y = self.odomdata.pose.pose.orientation.y
-        msg.pose.orientation.z = self.odomdata.pose.pose.orientation.z
-        msg.pose.orientation.w = self.odomdata.pose.pose.orientation.w
+        msg.pose.orientation.x = 0#self.odomdata.pose.pose.orientation.x
+        msg.pose.orientation.y = 0#self.odomdata.pose.pose.orientation.y
+        msg.pose.orientation.z = 1#np.abs(self.odomdata.pose.pose.orientation.z)
+        msg.pose.orientation.w = 0#self.odomdata.pose.pose.orientation.w
         self.goalnode.publish(msg)
 
     def moveToGoal(self, startlat, startlong, endlat, endlong):
@@ -129,6 +197,25 @@ class JackalController:
         y = self.odomdata.pose.pose.position.y + d*np.sin(self.odomheading)
 
         self.publishGoal(x, y)
+
+    def createGoalStatusListener(self):
+        self.goalstatus = rospy.Subscriber("/move_base/status", GoalStatusArray, self.updateGoalStatus)
+
+    def updateGoalStatus(self, data):
+        if len(data.status_list) > 0:
+            goalstatus = data.status_list[-1].status
+        else:
+            return
+        
+        if self.curstatus == GoalStatus.SUCCEEDED and goalstatus == GoalStatus.ACTIVE:
+            print("Moving to waypoint")
+            self.moving = True
+            self.curstatus = goalstatus
+        elif self.curstatus == GoalStatus.ACTIVE and goalstatus == GoalStatus.SUCCEEDED:
+            print("Arrived at waypoint")
+            self.moving = False
+            self.curstatus = goalstatus
+            
 
     ### LIDAR ###
     def createLidarListener(self, topic):
@@ -170,10 +257,9 @@ class JackalController:
         self.headingdata = data
 	
         # print(data)
-        declination_bias = 0 # not true, but good enough for dbg
         x = data.magnetic_field.x
         y = data.magnetic_field.y
-        yaw = np.arctan2(y, x) + declination_bias
+        yaw = np.arctan2(y, x)
 
         # only use the calibration lists after calibration
         if self.has_calibrated:
@@ -185,8 +271,15 @@ class JackalController:
                 self.last_heading_i = i+start_i
                 break
 
+        if self.has_calibrated:
+            declination_bias =  np.radians(270.0)
+            yaw += declination_bias
+            if yaw < 0:
+                yaw += 2*np.pi
+            if yaw > 2*np.pi:
+                yaw -= 2*np.pi
         self.heading = yaw
-        print('self.heading: ' + str(self.heading))
+        # print(f'heading: {self.heading}')
 
     def calibHeading(self):
         """
@@ -233,7 +326,7 @@ class JackalController:
         
 
     ### GPS ###
-    def createGpsListner(self, topic):
+    def createGpsListener(self, topic):
         """
         Subscriber to Jackal GPS topic
         """
@@ -243,7 +336,21 @@ class JackalController:
         """
         Handles GPS data
         """
-        self.gpsdata = data
+
+        if not math.isnan(data.latitude) and not math.isnan(data.longitude):
+            self.gpsdata = data
+            self.latitude = data.latitude
+            self.longitude = data.longitude
+
+    def createGPSaccListener(self, topic):
+        """
+        Subscriber to GPS accuracy topic
+        """
+        self.acc_node = rospy.Subscriber(topic, Float32, self.update_gps_acc)
+
+    def update_gps_acc(self, m):
+        self.gps_acc = m.data
+        # print(f'gps_acc: {self.gps_acc}')
 
     ### ODOM ###
     def createOdomListener(self, topic):
@@ -286,7 +393,7 @@ class JackalController:
             start: (latitude, longitude) start GPS point
             end: (latitude, longitude) end GPS point
         """
-        ang = np.arctan2((end[1] - start[1]), (end[0] - start[0]))
+        ang = np.arctan2((end[0] - start[0]), (end[1] - start[1]))
         distance = self.haversine(start[0], start[1], end[0], end[1])
 
         if ang < 0:
@@ -304,8 +411,6 @@ class JackalController:
         while abs(self.heading - ang) > 0.05:
             self.Drive(0, 0.25)
             self.rate.sleep()
-
-
             #print("HEADING " + str(self.heading) + " | BEARING " + str(ang))
 
         return dist
@@ -337,7 +442,7 @@ class JackalController:
 
         if self.gps:
             print("Waiting for GPS data...")
-            while(self.gps is None):
+            while(self.gpsdata is None):
                 time.sleep(1)
             print("DONE")
 
@@ -352,24 +457,54 @@ class JackalController:
             self.gpsnode.unregister
 
 
-if __name__ == "__main__":   
+if __name__ == "__main__":
 
-    test = JackalController(headingtopic='gx5/mag')
+    # kill any previously running instances
+    os.system("kill -9 $(pgrep -f 'python wifi_ros.py')")
+    os.system("python wifi_ros.py &")
+    os.system("kill -9 $(pgrep -f 'python grab_gps')")
+    os.system("python grab_gps.py &")
+
+    test = JackalController(headingtopic='gx5/mag', gpstopic='fone_gps/fix')
     test.awaitReadings()
-    test.calibHeading()
+    if os.path.exists("calib.pkl"):
+        with open("calib.pkl", "rb") as f:
+            a = pickle.load(f, encoding='bytes')
+            test.uncalib_i = a[0]
+            test.calib_o = a[1]
+            test.has_calibrated = True
+    else:
+        test.calibHeading()
+        with open("calib.pkl", "wb") as f:
+            pickle.dump([test.uncalib_i, test.calib_o], f)
 
-    #start = [test.gpsdata.latitude, test.gpsdata.longitude]
-    #end1 = [33.64659, -117.84304] #HERE
-    #end2 = [33.64721, -117.84289] #FAR
-    #end3 = [33.64542, -117.84073] #EINSTEIN
-    
-    #INDOOR
-    #end1 = [33.64753, -117.83918]
-    #end2 = [33.65073, -117.83830]
+    test.rosbag() # start recording
 
-    #test.moveToGoal(start[0], start[1], end1[0], end1[1])
-    #end2 = [33.64755, -117.83737]
-    #end3 = [33.64542, -117.84072]
-    #test.turnToWaypoint(end2[0], end2[1], end1[0], end1[1])
+    # SBSG waypoints
+    # [33.64753, -117.83918] # Lab
+    # [33.64755, -117.83737] # Parking
+    # [33.65073, -117.83830] # Two asprin
+    # [33.64542, -117.84073] # Einsteins
 
-    raw_input("Press ENTER to terminate script")
+    # Park waypoints
+    # [33.64659, -117.84304]   # Intersection
+    # [33.64721, -117.84289]   # End of dirt road
+    # [33.646727, -117.843020] # Halfway dirt road
+
+    '''
+    network = PlaceNetwork()
+    network.initAldritch()
+    network.initConnections()
+
+    path = network.spikeWave(network.points[(0, 0)], network.points[(0, 0)])
+    for point in path[::-1]:
+        print("Moving to waypoint: " + str(network.cells[point].origin[0]) + ", "  + str(network.cells[point].origin[1]))
+        test.driveToWaypoint(network.cells[point].origin[0], network.cells[point].origin[1])
+        test.turnToWaypoint(test.latitude, test.longitude, network.cells[point].origin[0], network.cells[point].origin[1])
+    '''
+
+    try:
+        input("Press ENTER to terminate script")
+    except KeyboardInterrupt: # hmm, doesn't work
+        pass
+    test.rosbag(False) # stop recording
