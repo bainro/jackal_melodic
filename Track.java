@@ -312,10 +312,20 @@ public class Track {
         latitudeEnd = location.getLocation().getLatitude();
         longitudeEnd = location.getLocation().getLongitude();
 
-        //Log.d("LongTest", String.valueOf(longitudeEnd));
+        if (location.getLocation().hasAltitude()) {
+            altitudeEnd = location.getLocation().getAltitude();
+        } else {
+            altitudeEnd = NOT_AVAILABLE;
+        }
+        egmAltitudeCorrectionEnd = location.getAltitudeEGM96Correction();
+
+        speedEnd = location.getLocation().hasSpeed() ? location.getLocation().getSpeed() : NOT_AVAILABLE;
+        accuracyEnd = location.getLocation().hasAccuracy() ? location.getLocation().getAccuracy() : STANDARD_ACCURACY;
+        timeEnd = location.getLocation().getTime();
 
         String POST_URL = "http://192.168.1.11/";
         String POST_PARAMS = String.valueOf(latitudeEnd) + "&" + String.valueOf(longitudeEnd);
+        POST_PARAMS = POST_PARAMS + "&" + String.valueOf(accuracyEnd);
         try{
             URL obj = new URL(POST_URL);
             HttpURLConnection con = (HttpURLConnection) obj.openConnection();
@@ -331,19 +341,6 @@ public class Track {
         } catch(IOException ex) {
             //Log.d("dbg", ex.getMessage());
         }
-
-
-
-        if (location.getLocation().hasAltitude()) {
-            altitudeEnd = location.getLocation().getAltitude();
-        } else {
-            altitudeEnd = NOT_AVAILABLE;
-        }
-        egmAltitudeCorrectionEnd = location.getAltitudeEGM96Correction();
-
-        speedEnd = location.getLocation().hasSpeed() ? location.getLocation().getSpeed() : NOT_AVAILABLE;
-        accuracyEnd = location.getLocation().hasAccuracy() ? location.getLocation().getAccuracy() : STANDARD_ACCURACY;
-        timeEnd = location.getLocation().getTime();
 
         if (egmAltitudeCorrectionEnd == NOT_AVAILABLE) getEGMAltitudeCorrectionEnd();
         if (egmAltitudeCorrectionStart == NOT_AVAILABLE) getEGMAltitudeCorrectionStart();
