@@ -57,6 +57,8 @@ if __name__ == "__main__":
   bag.close()
   
   print(f'Number of datapoints: {len(lats)}')
+  if len(lats) == len(longs) == len(headings):
+    headings = headings[:-1]
   _str = f'Not parallel lists! ({len(lats)},{len(longs)},{len(headings)})'
   assert len(lats) == len(longs) == len(headings),  _str
   exit()
