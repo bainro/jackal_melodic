@@ -50,8 +50,8 @@ if __name__ == "__main__":
     elif topic == "gx5/mag":
       print("HEADING!")
       if new_fix:
-        x = msg.data.magnetic_field.x
-        y = msg.data.magnetic_field.y
+        x = msg.magnetic_field.x
+        y = msg.magnetic_field.y
         bias = 0 # @TODO finetune
         yaw = np.arctan2(y, x) + bias
         headings.append(yaw)
