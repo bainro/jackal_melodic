@@ -62,7 +62,7 @@ if __name__ == "__main__":
   
   # normalize lat & long
   _lats, _longs = [], []
-  for l1, l2 in lats, longs:
+  for l1, l2 in zip(lats, longs):
     _lats.append((l1 - min(lats)) / (max(lats) - min(lats)))
     _longs.append((l2 - min(longs)) / (max(longs) - min(longs)))
   lats, longs = _lats, _longs
