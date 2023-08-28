@@ -55,7 +55,10 @@ if __name__ == "__main__":
   bag.close()
 
   # normalize lat & long
-  lats = (lats - min(lats)) / (max(lats) - min(lats))
+  _lats = []
+  for l in lats:
+    _lats.append((l - min(lats)) / (max(lats) - min(lats)))
+  lats = _lats
   longs = (longs - min(longs)) / (max(longs) - min(longs))
   assert min(lats) > 0 and max(lats) <= 1.0, ":("
   assert min(longs) > 0 and max(longs) <= 1.0, ":("
