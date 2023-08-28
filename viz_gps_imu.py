@@ -58,7 +58,9 @@ if __name__ == "__main__":
 
   print(f'Number of datapoints: {len(lats)}')
   if not (len(lats) == len(longs) == len(gps_accs)):
-    headings = headings[:-1]
+    # headings = headings[:-1]
+    lats = lats[:-1]
+    longs = longs[:-1]
   _str = f'Not parallel lists! ({len(lats)},{len(longs)},{len(gps_accs)})'
   assert len(lats) == len(longs) == len(gps_accs),  _str
 
