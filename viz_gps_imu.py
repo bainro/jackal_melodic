@@ -44,6 +44,8 @@ if __name__ == "__main__":
         longs.append(msg.longitude)
         new_acc = False      
     elif "fone_gps/acc" in topic: # "gx5/mag":
+      if new_acc: 
+        continue
       new_acc = True
       #x = msg.magnetic_field.x
       #y = msg.magnetic_field.y
