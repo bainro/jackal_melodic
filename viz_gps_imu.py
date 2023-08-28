@@ -33,16 +33,13 @@ parser.add_argument('--size', type=int, default=256, help=_help)
 args = parser.parse_args()
 
 if __name__ == "__main__":
-  # run a bag in offline localization-only mode 
-  _ = os.system("rosparam set use_sim_time true")
-
   path_x, path_y, path_h = [], [], []
   bag = rosbag.Bag(args.bag_file)
   with open(os.path.join(args.out_dir, "meta_data.csv"), "a") as meta_data_file:
     for topic, msg, t in bag.read_messages():
-      
-      
-
+      print(f'topic: {topic}')
+      print(f'timestamp: {t}')
+      print(f'msg length: {len(msg)}')
   bag.close()
 
   
