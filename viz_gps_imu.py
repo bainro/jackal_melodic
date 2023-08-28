@@ -38,6 +38,7 @@ if __name__ == "__main__":
   for topic, msg, t in bag.read_messages():
     print(f'topic: {topic}')
     print(f'timestamp: {t}')
+    print(f'type(msg): {type(msg)}')
     print(f'msg: {msg}')
     exit()
     if topic == "":
