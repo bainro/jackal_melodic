@@ -40,12 +40,16 @@ if __name__ == "__main__":
     print(f'timestamp: {t}')
     print(f'type(msg): {type(msg)}')
     print(f'msg: {msg}')
-    if topic == "":
+    if topic == "fone_gps/fix":
+      if new_heading:
+        pass
       lats.append()
-    elif topic == "":
       longs.append()
+      # helps keep the 2 parallel
+      new_fix = True
     elif topic == "":
-      headings.append()
+      headings.append(gx5/mag)
+      new_fix = False
     else:
       continue
   bag.close()
