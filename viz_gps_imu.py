@@ -39,12 +39,10 @@ if __name__ == "__main__":
   new_fix = True
   for topic, msg, t in bag.read_messages():
     if topic == "fone_gps/fix":
-      print("GPS FIX!")
       lats.append(msg.latitude)
       longs.append(msg.longitude)
       new_fix = True
     elif topic == "gx5/mag":
-      print("HEADING!")
       if new_fix:
         x = msg.magnetic_field.x
         y = msg.magnetic_field.y
@@ -61,7 +59,6 @@ if __name__ == "__main__":
     headings = headings[:-1]
   _str = f'Not parallel lists! ({len(lats)},{len(longs)},{len(headings)})'
   assert len(lats) == len(longs) == len(headings),  _str
-  exit()
   
   # use keys to translate, rotate, & scale the path
   rot = args.rot
