@@ -44,13 +44,17 @@ if __name__ == "__main__":
     new_fix = True
     if topic == "fone_gps/fix":
       print("GPS FIX!")
-      lats.append()
-      longs.append()
+      lats.append(msg.data.latitude)
+      longs.append(msg.data.longitude)
       new_fix = True
-    elif topic == "":
+    elif topic == "gx5/mag":
       print("HEADING!")
       if new_fix:
-        headings.append(gx5/mag)
+        x = msg.data.magnetic_field.x
+        y = msg.data.magnetic_field.y
+        bias = 0 # @TODO finetune
+        yaw = np.arctan2(y, x) + bias
+        headings.append(yaw)
         new_fix = False
     else:
       continue
