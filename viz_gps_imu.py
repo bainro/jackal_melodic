@@ -33,7 +33,7 @@ parser.add_argument('--size', type=int, default=256, help=_help)
 args = parser.parse_args()
 
 if __name__ == "__main__":
-  lats, longs, headings = [], [], []
+  lats, longs, headings, gps_accs = [], [], [], []
   bag = rosbag.Bag(args.bag_file)
   # helps keep the 2 parallel
   new_fix = True
@@ -42,13 +42,13 @@ if __name__ == "__main__":
       lats.append(msg.latitude)
       longs.append(msg.longitude)
       new_fix = True
-    elif topic == "gx5/mag":
+    elif topic == "fone_gps/acc": # "gx5/mag":
       if new_fix:
-        x = msg.magnetic_field.x
-        y = msg.magnetic_field.y
-        bias = 0 # @TODO finetune
-        yaw = np.arctan2(y, x) + bias
-        headings.append(yaw)
+        #x = msg.magnetic_field.x
+        #y = msg.magnetic_field.y
+        #yaw = np.arctan2(y, x)
+        #headings.append(yaw)
+        gps_accs.append(msg)
         new_fix = False
     else:
       continue
@@ -61,9 +61,9 @@ if __name__ == "__main__":
   assert len(lats) == len(longs) == len(headings),  _str
 
   with open(os.path.join(args.out_dir, "meta_data.csv"), "w") as meta_data_file:
-    meta_data_file.write("color_bin,Longitude,Latitude\n")
+    meta_data_file.write("gps_acc,Longitude,Latitude\n")
     for i in range(len(lats)):
-      meta_data_file.write(f'{headings[i]:.1f},{longs[i]},{lats[i]}\n')
+      meta_data_file.write(f'{gps_acc[i]:.1f},{longs[i]},{lats[i]}\n')
 
   # normalize lat & long
   _lats, _longs = [], []
