@@ -44,8 +44,8 @@ if __name__ == "__main__":
     new_fix = True
     if topic == "fone_gps/fix":
       print("GPS FIX!")
-      lats.append(msg.data.latitude)
-      longs.append(msg.data.longitude)
+      lats.append(msg.latitude)
+      longs.append(msg.longitude)
       new_fix = True
     elif topic == "gx5/mag":
       print("HEADING!")
