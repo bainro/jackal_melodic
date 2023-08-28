@@ -63,7 +63,7 @@ if __name__ == "__main__":
   with open(os.path.join(args.out_dir, "meta_data.csv"), "w") as meta_data_file:
     meta_data_file.write("color_bin,Longitude,Latitude\n")
     for i in range(len(lats)):
-      meta_data_file.write(f'{headings[i]},{longs[i]},{lats[i]}\n')
+      meta_data_file.write(f'{headings[i]:.1f},{longs[i]},{lats[i]}\n')
 
   # normalize lat & long
   _lats, _longs = [], []
