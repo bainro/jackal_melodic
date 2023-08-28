@@ -137,7 +137,7 @@ if __name__ == "__main__":
                vmin=0, 
                vmax=255)
     trans_path_x, trans_path_y = [], []
-    for i in range(len(path_x)):
+    for i in range(len(lats)):
       x = lats[i] * math.cos(rot) - longs[i] * math.sin(rot)
       trans_path_x.append(scale * (x + x_off))
       y = longs[i] * math.cos(rot) + lats[i] * math.sin(rot)
