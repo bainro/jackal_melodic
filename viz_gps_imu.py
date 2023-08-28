@@ -48,7 +48,7 @@ if __name__ == "__main__":
         #y = msg.magnetic_field.y
         #yaw = np.arctan2(y, x)
         #headings.append(yaw)
-        gps_accs.append(msg)
+        gps_accs.append(msg.data)
         new_fix = False
     else:
       continue
