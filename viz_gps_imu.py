@@ -33,13 +33,18 @@ parser.add_argument('--size', type=int, default=256, help=_help)
 args = parser.parse_args()
 
 if __name__ == "__main__":
-  path_x, path_y, path_h = [], [], []
+  lats, longs, headings = [], [], []
   bag = rosbag.Bag(args.bag_file)
-  with open(os.path.join(args.out_dir, "meta_data.csv"), "a") as meta_data_file:
-    for topic, msg, t in bag.read_messages():
-      print(f'topic: {topic}')
-      print(f'timestamp: {t}')
-      print(f'msg length: {len(msg)}')
+  for topic, msg, t in bag.read_messages():
+    print(f'topic: {topic}')
+    print(f'timestamp: {t}')
+    print(f'msg length: {len(msg)}')
+    if topic == "":
+      lats.append()
+    elif topic == "":
+      longs.append()
+    elif topic == "":
+      headings.append()
   bag.close()
 
   
