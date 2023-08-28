@@ -136,140 +136,14 @@ if __name__ == "__main__":
   l.legendHandles[1]._sizes = [200]
   fig.savefig('/tmp/overlay.svg', format='svg', dpi=1200)
   plt.clf()
- 
-  def rotate_image(im, x, y, qz, qw):
-    # print("assumes HxWxC image format!")
-    rotation_pt = (int(x),int(y))
-    _roll, _pitch, yaw = t.euler_from_quaternion([0, 0, qz, qw])
-    yaw = yaw * -1 # flip rotation direction
-    # offset to make the robot look up wrt to the map
-    yaw = yaw + (math.pi / 2)
-    yaw_degs = yaw * 180 / math.pi
-    rot_mat = cv2.getRotationMatrix2D(rotation_pt, yaw_degs, 1.0)
-    rot_img = cv2.warpAffine(im, rot_mat, im.shape[1::-1], flags=cv2.INTER_LINEAR)
-    return rot_img
-  
-  # global map perspective's width (centered at robot)
-  gmp_w = args.gmp_w
-  # add padding to simplify edge cases after rotating and remove later.
-  if len(map_img.shape) == 3: # e.g. RGB
-    # assumes padding color is same as top-left map px
-    tl_color = map_img[0,0,:]
-    old_shape = list(map_img.shape)
-    padding_shape = [2*gmp_w, 2*gmp_w, 0]
-    new_shape = [sum(x) for x in zip(old_shape, padding_shape)]
-    _tmp_map = np.zeros(tuple(new_shape))
-    _tmp_map[...] = tl_color
-    _tmp_map[gmp_w:-gmp_w, gmp_w:-gmp_w, :] = map_img[...]
-    map_img = _tmp_map
-  else: # e.g. grayscale
-    tl_color = 205 # map_img[0,0]
-    old_shape = list(map_img.shape)
-    padding_shape = [2*gmp_w, 2*gmp_w]
-    new_shape = [sum(x) for x in zip(old_shape, padding_shape)]
-    _tmp_map = np.zeros(tuple(new_shape))
-    _tmp_map[...] = tl_color
-    _tmp_map[gmp_w:-gmp_w, gmp_w:-gmp_w] = map_img[...]
-    map_img = _tmp_map
-      
-  prior_data = 0
-  if args.combine:
-    with open(os.path.join(args.out_dir, "meta_data.csv"), "r") as meta_file:
-      prior_data = len(meta_file.readlines())  
-  else:
-    _ = os.system(f"rm -fr {args.out_dir} > /dev/null 2>&1")
-    os.makedirs(args.out_dir, exist_ok=True)
-    
-  for i in range(len(trans_path_x)):
-    if len(map_img.shape) == 3: # e.g. RGB
-      gmp_img = np.zeros(shape=(gmp_w, gmp_w, 3))
-    else:
-      gmp_img = np.zeros(shape=(gmp_w, gmp_w))
-    # rotation origin
-    rx = trans_path_x[i] + gmp_w
-    ry = trans_path_y[i] + gmp_w
-    rot_map = rotate_image(map_img, rx, ry, path_z[i], path_w[i])
-    # crop out around the robot
-    x_start = int(trans_path_x[i] + gmp_w / 2)
-    x_end = int(trans_path_x[i] + 3 * gmp_w / 2)
-    y_start = int(trans_path_y[i] + gmp_w / 2)
-    y_end = int(trans_path_y[i] + 3 * gmp_w / 2)
-      
-    if len(rot_map.shape) == 3: # e.g. RGB
-      gmp_img[:, :, :] = rot_map[y_start:y_end, x_start:x_end, :]
-    else: # e.g. grayscale
-      gmp_img[:, :] = rot_map[y_start:y_end, x_start:x_end]
-    
-    gmp_img = cv2.resize(gmp_img, dsize=(args.size, args.size), 
-                         interpolation=cv2.INTER_AREA) 
-    if len(gmp_img.shape) == 3: # eg RGB
-      cv2.imwrite(os.path.join(args.out_dir, f'{i + prior_data}_map.png'), gmp_img*255)
-    else:
-      cv2.imwrite(os.path.join(args.out_dir, f'{i + prior_data}_map.png'), gmp_img)
-    #if i == 0:
-      #plt.title("verify map region of interest quality")
-      #plt.imshow(gmp_img, cmap='gray', vmin=0, vmax=255)
-      #plt.show()
-    print(i)
 
   # save each FPV image with the corresponding GMP image
   bag = rosbag.Bag(args.bag_file)
   with open(os.path.join(args.out_dir, "meta_data.csv"), "a") as meta_data_file:
-    if prior_data == 0:
-      meta_data_file.write("frame,time,heading,x,y\n")
-    i = 0
-    # @TODO make CLI arg instead of hard-coded
-    time_gap = 5
-    cam_img = None
     for topic, msg, _t in bag.read_messages(topics=['/image_proc_resize/image']):
-      if i >= len(path_x):
-        break
       msg_t = msg.header.stamp.secs + (msg.header.stamp.nsecs / 1e9)
       if msg_t < path_secs[i]:
         continue
-      assert_str = "assuming width is 2nd dimension"
-      assert og_map_shape[1] > og_map_shape[0], assert_str
-      norm_x = trans_path_x[i] / og_map_shape[1]
-      norm_y = trans_path_y[i] / og_map_shape[0]
-      assert_str = "normalizing should result in values between 0 & 1"
-      assert norm_x >= 0 and norm_x <= 1, assert_str
-      assert norm_y >= 0 and norm_y <= 1, assert_str
-      assert msg.width > msg.height, "image width must be greater than image height"
-      cam_img = np.asarray(list(msg.data), dtype=np.float32)
-      cam_img = cam_img.reshape((msg.height, msg.width, 3))
-      # whether still need to grab certain history channels
-      ch1 = True
-      # @TODO HORRIBLY INEFFICIENT XD 
-      # @TODO Grab from future instead of past or rolling!
-      for _, _msg, _t in bag.read_messages(topics=['/image_proc_resize/image']):
-        _msg_t = _msg.header.stamp.secs + (_msg.header.stamp.nsecs / 1e9)
-        # history channels
-        if ch1 and _msg_t >= path_secs[i] - time_gap * 2:
-          if _msg_t == msg_t:
-            break
-          # only do this once
-          ch1 = False
-          _cam_img = np.asarray(list(_msg.data), dtype=np.float32)
-          cam_img[:,:,0] = _cam_img.reshape((_msg.height, _msg.width, 3))[:,:,0]
-          continue
-        if _msg_t >= path_secs[i] - time_gap:
-          _cam_img = np.asarray(list(_msg.data), dtype=np.float32)
-          cam_img[:,:,1] = _cam_img.reshape((_msg.height, _msg.width, 3))[:,:,0]
-          break
-      # not enough time since bag start to make history ch image!
-      if ch1:
-        i += 1
-        continue
-      meta_data_file.write("%s,%s,%.2f,%f,%f\n" % (i+prior_data, path_secs[i], path_yaw[i], norm_x, norm_y))    
-      # crop to center
-      x_offset = int((msg.width - msg.height) // 2)
-      cam_img = cam_img[:, x_offset:-x_offset, :]
-      assert_str = f"image should be square. {cam_img.shape[1]} != {cam_img.shape[0]}"
-      assert cam_img.shape[0] == cam_img.shape[1], assert_str
-      resize_dims = (args.size, args.size)
-      fpv_img = cv2.resize(cam_img, dsize=resize_dims, interpolation=cv2.INTER_AREA)
-      save_name = os.path.join(args.out_dir, f'{i + prior_data}_camera.png')
-      cv2.imwrite(save_name, fpv_img[...,::-1])
       i += 1
       if i == 1:
         plt.title("verify first person view (i.e. camera image)")
