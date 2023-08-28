@@ -98,7 +98,7 @@ if __name__ == "__main__":
    
   # load the picture of the map
   map_img = None
-  map_file = args.map_file or "/tmp/map.pgm"
+  map_file = args.map_file or "/tmp/map.png"
   with open(map_file, 'rb') as mf:
     map_img = plt.imread(mf)
   og_map_shape = map_img.shape
