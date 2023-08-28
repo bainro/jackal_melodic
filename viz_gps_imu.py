@@ -63,7 +63,8 @@ if __name__ == "__main__":
   # normalize lat & long
   _lats, _longs = [], []
   for l1, l2 in zip(lats, longs):
-    _lats.append((l1 - min(lats)) / (max(lats) - min(lats)))
+    # x is reverse for some reason (probably because of the neg)
+    _lats.append(1 - ((l1 - min(lats)) / (max(lats) - min(lats))))
     _longs.append((l2 - min(longs)) / (max(longs) - min(longs)))
   lats, longs = _lats, _longs
   _str = f'min,max lats: ({min(lats)},{max(lats)})'
