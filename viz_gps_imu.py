@@ -40,15 +40,16 @@ if __name__ == "__main__":
     print(f'timestamp: {t}')
     print(f'type(msg): {type(msg)}')
     print(f'msg: {msg}')
-    exit()
     if topic == "":
       lats.append()
     elif topic == "":
       longs.append()
     elif topic == "":
       headings.append()
+    else:
+      continue
   bag.close()
-
+  exit()
   
   print("Number of datapoints after filtering: ", len(path_x))
   assert len(path_x) == len(path_y) == len(path_h), "Not parallel lists!"
