@@ -54,20 +54,20 @@ if __name__ == "__main__":
       continue
   bag.close()
 
-  # normalize lat & long
-  _lats = []
-  for l in lats:
-    _lats.append((l - min(lats)) / (max(lats) - min(lats)))
-  lats = _lats
-  longs = (longs - min(longs)) / (max(longs) - min(longs))
-  assert min(lats) > 0 and max(lats) <= 1.0, ":("
-  assert min(longs) > 0 and max(longs) <= 1.0, ":("
-  
   print(f'Number of datapoints: {len(lats)}')
   if not (len(lats) == len(longs) == len(headings)):
     headings = headings[:-1]
   _str = f'Not parallel lists! ({len(lats)},{len(longs)},{len(headings)})'
   assert len(lats) == len(longs) == len(headings),  _str
+  
+  # normalize lat & long
+  _lats, _longs = [], []
+  for l1, l2 in lats, longs:
+    _lats.append((l1 - min(lats)) / (max(lats) - min(lats)))
+    _longs.append((l2 - min(longs)) / (max(longs) - min(longs)))
+  lats, longs = _lats, _longs
+  assert min(lats) > 0 and max(lats) <= 1.0, ":("
+  assert min(longs) > 0 and max(longs) <= 1.0, ":("
   
   # use keys to translate, rotate, & scale the path
   rot = args.rot
