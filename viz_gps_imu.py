@@ -35,6 +35,16 @@ args = parser.parse_args()
 if __name__ == "__main__":
   # run a bag in offline localization-only mode 
   _ = os.system("rosparam set use_sim_time true")
+
+  path_x, path_y, path_h = [], [], []
+  bag = rosbag.Bag(args.bag_file)
+  with open(os.path.join(args.out_dir, "meta_data.csv"), "a") as meta_data_file:
+    for topic, msg, t in bag.read_messages():
+      
+      
+
+  bag.close()
+
   
   print("Number of datapoints after filtering: ", len(path_x))
   assert len(path_x) == len(path_y) == len(path_h), "Not parallel lists!"
@@ -137,17 +147,4 @@ if __name__ == "__main__":
   fig.savefig('/tmp/overlay.svg', format='svg', dpi=1200)
   plt.clf()
 
-  # save each FPV image with the corresponding GMP image
-  bag = rosbag.Bag(args.bag_file)
-  with open(os.path.join(args.out_dir, "meta_data.csv"), "a") as meta_data_file:
-    for topic, msg, _t in bag.read_messages(topics=['/image_proc_resize/image']):
-      msg_t = msg.header.stamp.secs + (msg.header.stamp.nsecs / 1e9)
-      if msg_t < path_secs[i]:
-        continue
-      i += 1
-      if i == 1:
-        plt.title("verify first person view (i.e. camera image)")
-        plt.imshow(fpv_img/255)
-        plt.show()
-  bag.close()
   print("DONE!")
