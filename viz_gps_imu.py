@@ -56,8 +56,8 @@ if __name__ == "__main__":
       continue
   bag.close()
   
-  print(f'Number of datapoints: {len(path_x)}')
-  assert len(path_x) == len(path_y) == len(path_h), "Not parallel lists!"
+  print(f'Number of datapoints: {len(lats)}')
+  assert len(lats) == len(longs) == len(headings), "Not parallel lists!"
   exit()
   
   # use keys to translate, rotate, & scale the path
