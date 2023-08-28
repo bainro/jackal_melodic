@@ -43,7 +43,7 @@ if __name__ == "__main__":
     # helps keep the 2 parallel
     new_fix = True
     if topic == "fone_gps/fix":
-      print("GPS FIX!"))
+      print("GPS FIX!")
       lats.append()
       longs.append()
       new_fix = True
