@@ -53,6 +53,12 @@ if __name__ == "__main__":
     else:
       continue
   bag.close()
+
+  # normalize lat & long
+  lats = (lats - min(lats)) / (max(lats) - min(lats))
+  longs = (longs - min(longs)) / (max(longs) - min(longs))
+  assert min(lats) > 0 and max(lats) <= 1.0, ":("
+  assert min(longs) > 0 and max(longs) <= 1.0, ":("
   
   print(f'Number of datapoints: {len(lats)}')
   if not (len(lats) == len(longs) == len(headings)):
@@ -114,7 +120,7 @@ if __name__ == "__main__":
     map_img = plt.imread(mf)
   og_map_shape = map_img.shape
   
-  colors = cm.gist_rainbow(np.linspace(0, 0.85, len(path_x)))
+  colors = cm.gist_rainbow(np.linspace(0, 0.85, len(lats)))
   fig = plt.figure(figsize=(36,12))
   while not enter_pressed:
     plt.clf()
@@ -127,9 +133,9 @@ if __name__ == "__main__":
                vmax=255)
     trans_path_x, trans_path_y = [], []
     for i in range(len(path_x)):
-      x = path_x[i] * math.cos(rot) - path_y[i] * math.sin(rot)
+      x = lats[i] * math.cos(rot) - longs[i] * math.sin(rot)
       trans_path_x.append(scale * (x + x_off))
-      y = path_y[i] * math.cos(rot) + path_x[i] * math.sin(rot)
+      y = longs[i] * math.cos(rot) + lats[i] * math.sin(rot)
       trans_path_y.append(scale * (-y + y_off))
     # overlay the path on the map 
     plt.scatter(x=trans_path_x, y=trans_path_y, c=colors, s=3)
