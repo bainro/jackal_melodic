@@ -39,11 +39,12 @@ if __name__ == "__main__":
   new_fix = True
   for topic, msg, t in bag.read_messages():
     print(topic)
-    if topic == "fone_gps/fix":
+    if "blah" not in somestring: 
+    if "fone_gps/fix" in topic:
       lats.append(msg.latitude)
       longs.append(msg.longitude)
       new_fix = True
-    elif topic == "fone_gps/acc": # "gx5/mag":
+    elif "fone_gps/acc" in topic: # "gx5/mag":
       if new_fix:
         #x = msg.magnetic_field.x
         #y = msg.magnetic_field.y
