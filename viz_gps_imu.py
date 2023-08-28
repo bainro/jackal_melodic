@@ -39,6 +39,7 @@ if __name__ == "__main__":
     print(f'topic: {topic}')
     print(f'timestamp: {t}')
     print(f'msg length: {len(msg)}')
+    exit()
     if topic == "":
       lats.append()
     elif topic == "":
