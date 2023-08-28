@@ -43,7 +43,7 @@ if __name__ == "__main__":
         lats.append(msg.latitude)
         longs.append(msg.longitude)
         new_acc = False      
-    elif "wifi_strength" in topic: # "gx5/mag":
+    elif "fone_gps/acc" in topic: # "gx5/mag":
       if new_acc: 
         continue
       new_acc = True
