@@ -35,13 +35,9 @@ args = parser.parse_args()
 if __name__ == "__main__":
   lats, longs, headings = [], [], []
   bag = rosbag.Bag(args.bag_file)
+  # helps keep the 2 parallel
+  new_fix = True
   for topic, msg, t in bag.read_messages():
-    print(f'topic: {topic}')
-    print(f'timestamp: {t}')
-    print(f'type(msg): {type(msg)}')
-    print(f'msg: {msg}')
-    # helps keep the 2 parallel
-    new_fix = True
     if topic == "fone_gps/fix":
       print("GPS FIX!")
       lats.append(msg.latitude)
@@ -59,10 +55,10 @@ if __name__ == "__main__":
     else:
       continue
   bag.close()
-  exit()
   
-  print("Number of datapoints after filtering: ", len(path_x))
+  print(f'Number of datapoints: {len(path_x)}')
   assert len(path_x) == len(path_y) == len(path_h), "Not parallel lists!"
+  exit()
   
   # use keys to translate, rotate, & scale the path
   rot = args.rot
