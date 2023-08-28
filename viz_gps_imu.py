@@ -1,5 +1,5 @@
 '''
-Coverts a rosbag into a dataset for DCNNs to estimate 2D location
+Visualize gps and imu data from a rosbag
 '''
 import os
 import cv2
