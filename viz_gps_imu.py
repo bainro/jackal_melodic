@@ -14,16 +14,12 @@ from pynput import keyboard as kb
 from tf import transformations as t
 
 parser = argparse.ArgumentParser()
-_help = "use this image instead of Cartographer's SLAM map"
+_help = "use this image as the background (eg satelite.png)"
 parser.add_argument("--map_file", type=str, default=False, help=_help)
 _help = "path to previously recorded rosbag"
 parser.add_argument("--bag_file", type=str, required=True, help=_help)
 _help = "directory to save the training data"
 parser.add_argument("--out_dir", type=str, required=True, help=_help)
-_help = "reuse previous path calculations"
-parser.add_argument('--reuse_path', default=False, action='store_true', help=_help)
-_help = "append to previous dataset instead of overwriting"
-parser.add_argument('--combine', default=False, action='store_true', help=_help)
 _help = "rotation of path in radians"
 parser.add_argument('--rot', type=float, default=0.006989, help=_help)
 _help = "scale of path"
@@ -32,35 +28,13 @@ _help = "higher moves the path more to the right"
 parser.add_argument('--x_off', type=float, default=24.38, help=_help)
 _help = "higher moves the path further down"
 parser.add_argument('--y_off', type=float, default=10.5, help=_help)
-_help = "larger values increase width of global map perspective"
-parser.add_argument('--gmp_w', type=int, default=120, help=_help)
-_help = "larger values filters less by distance"
-parser.add_argument('--path_filter_x', type=float, default=35, help=_help)
-_help = "larger values filters less by rotation (radians)"
-parser.add_argument('--path_filter_r', type=float, default=0.23, help=_help)
 _help = "size in pixels to save the dataset images"
 parser.add_argument('--size', type=int, default=256, help=_help)
 args = parser.parse_args()
 
 if __name__ == "__main__":
-  if not args.reuse_path:
-    # run a bag in offline localization-only mode (requires a previously learned SLAM map)
-    _ = os.system("rosparam set use_sim_time true")
-    os.system("pkill cart")
-    # now run cart in offline mode
-    offline_cmd = "roslaunch cartographer_toyota_hsr carl_offline.launch bag_filenames:='" 
-    offline_cmd = offline_cmd + args.bag_file + "' save_file:='/tmp/offline.pbstream'"
-    os.system(offline_cmd)
-    # carl_localize.launch expects the protobuf to be here
-    os.system("cp /tmp/offline.pbstream /tmp/current.pbstream")
-    # carl_localize.launch expects the map to be here
-    os.system("roslaunch cartographer_toyota_hsr carl_localize.launch &")
-    # could ask user to provide this, but we have the .pbstream anyway
-    os.system("rosrun map_server map_saver --occ 49 --free 40 -f '/tmp/map'")
-    os.system("pkill cart")
-    os.system("roslaunch cartographer_toyota_hsr carl_localize.launch &")
-    time.sleep(1)
-    os.system("rosservice call /trajectory_query 'trajectory_id: 0' > /tmp/traj.txt")
+  # run a bag in offline localization-only mode 
+  _ = os.system("rosparam set use_sim_time true")
   # get just the pose position (x,y) and the corresponding timestamp (secs)
   os.system("grep -C4 position /tmp/traj.txt | grep -e 'x:' > /tmp/x.log")
   os.system("grep -C4 position /tmp/traj.txt | grep -e 'y:' > /tmp/y.log")
