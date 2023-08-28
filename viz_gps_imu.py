@@ -55,10 +55,10 @@ if __name__ == "__main__":
   bag.close()
 
   print(f'Number of datapoints: {len(lats)}')
-  if not (len(lats) == len(longs) == len(headings)):
+  if not (len(lats) == len(longs) == len(gps_accs)):
     headings = headings[:-1]
-  _str = f'Not parallel lists! ({len(lats)},{len(longs)},{len(headings)})'
-  assert len(lats) == len(longs) == len(headings),  _str
+  _str = f'Not parallel lists! ({len(lats)},{len(longs)},{len(gps_accs)})'
+  assert len(lats) == len(longs) == len(gps_accs),  _str
 
   with open(os.path.join(args.out_dir, "meta_data.csv"), "w") as meta_data_file:
     meta_data_file.write("gps_acc,Longitude,Latitude\n")
