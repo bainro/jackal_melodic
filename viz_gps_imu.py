@@ -35,67 +35,9 @@ args = parser.parse_args()
 if __name__ == "__main__":
   # run a bag in offline localization-only mode 
   _ = os.system("rosparam set use_sim_time true")
-  # get just the pose position (x,y) and the corresponding timestamp (secs)
-  os.system("grep -C4 position /tmp/traj.txt | grep -e 'x:' > /tmp/x.log")
-  os.system("grep -C4 position /tmp/traj.txt | grep -e 'y:' > /tmp/y.log")
-  os.system("grep -C4 position /tmp/traj.txt | grep -e 'secs:' | grep -v 'nsecs' > /tmp/secs.log")
-  os.system("grep -C4 position /tmp/traj.txt | grep -e 'nsecs:' > /tmp/nsecs.log")
-  os.system("grep -C4 'w:' /tmp/traj.txt | grep -e 'z:' > /tmp/rot_z.log")
-  os.system("grep     'w:' /tmp/traj.txt > /tmp/rot_w.log")
-  
-  def extract(fname, str_bias):
-    path_var = []
-    with open(fname, 'r') as f:
-      for l in f.readlines():
-        l = l.strip()
-        path_var.append(float(l[str_bias:]))
-    return path_var
-  
-  # read the files into parallel lists
-  path_x = extract('/tmp/x.log', 3)
-  path_y = extract('/tmp/y.log', 3)
-  # Quarternion rotation. We only need z & w
-  path_z = extract('/tmp/rot_z.log', 3)  
-  path_w = extract('/tmp/rot_w.log', 3)
-  path_yaw = [] # euler rotation from z & w
-  path_secs = extract('/tmp/secs.log', 6)
-  path_nsecs = extract('/tmp/nsecs.log', 6)
-  for i in range(len(path_secs)):
-    path_secs[i] = path_secs[i] + path_nsecs[i] / 1e9
-  del path_nsecs # don't need nsecs anymore
-  
-  # change angle in radians to filter consecutive poses
-  filter_dr = args.path_filter_r
-  filter_dx = args.path_filter_x
-  # last non-filtered (i.e. included) pose. 
-  last_pt = [math.inf, math.inf, math.inf] 
-  del_count = 0
-  # filter out poses based on (dx, dr) wrt last included pose
-  for i in range(len(path_secs)):
-    i = i - del_count
-    x = last_pt[0] - path_x[i]
-    y = last_pt[1] - path_y[i]
-    # pythagorean theorem
-    dx = (x**2 + y**2) ** 0.5
-  
-    rpy = t.euler_from_quaternion([0, 0, path_z[i], path_w[i]])
-    yaw = rpy[2] + math.pi # make smallest possible value == 0
-    # have to check for wrap around!
-    if abs(yaw - last_pt[2]) > math.pi:
-      dr = 2 * math.pi - abs(yaw - last_pt[2]) 
-    else:
-      dr = abs(yaw - last_pt[2])
-  
-    if dx > filter_dx or dr > filter_dr:
-      last_pt = [path_x[i], path_y[i], yaw]
-      path_yaw.append(yaw)
-    else: # bye-bye!
-      del path_x[i], path_y[i], path_z[i], path_w[i], path_secs[i]
-      del_count = del_count + 1
   
   print("Number of datapoints after filtering: ", len(path_x))
-  assert len(path_secs) == len(path_x) == len(path_y), "No longer parallel lists!"
-  assert len(path_y) == len(path_z) == len(path_w), "No longer parallel lists!"
+  assert len(path_x) == len(path_y) == len(path_h), "Not parallel lists!"
   
   # use keys to translate, rotate, & scale the path
   rot = args.rot
