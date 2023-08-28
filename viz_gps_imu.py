@@ -38,6 +38,7 @@ if __name__ == "__main__":
   # helps keep the 2 parallel
   new_fix = True
   for topic, msg, t in bag.read_messages():
+    print(topic)
     if topic == "fone_gps/fix":
       lats.append(msg.latitude)
       longs.append(msg.longitude)
