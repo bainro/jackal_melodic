@@ -36,7 +36,7 @@ if __name__ == "__main__":
   lats, longs, headings, gps_accs = [], [], [], []
   bag = rosbag.Bag(args.bag_file)
   # helps keep the 2 parallel
-  new_fix = True
+  new_acc = True
   for topic, msg, t in bag.read_messages():
     if "fone_gps/fix" in topic:
       if new_acc:
