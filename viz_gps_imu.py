@@ -71,7 +71,6 @@ if __name__ == "__main__":
     elif "wifi_strength" in topic:
       wifi_strength = msg.data
 
-    print(t);exit()
     update_due = t > next_update
     # this will filter maybe a few lines at the start
     update_due = (update_due and lat != None)
