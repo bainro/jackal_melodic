@@ -69,21 +69,21 @@ if __name__ == "__main__":
       elif "wifi_strength" in topic:
         wifi_strength = msg.data
 
-    update_due = t > next_update
-    print(update_due)
-    # this will filter maybe a few lines at the start
-    update_due &= (lat != None)
-    update_due &= (lon != None)
-    update_due &= (base_lat != None)
-    update_due &= (base_lon != None)
-    update_due &= (base_imu_heading != None)
-    update_due &= (gx5_heading != None)
-    update_due &= (gps_acc != None)
-    update_due &= (wifi_strength != None)
-    if update_due:
-      csv_f.write(f'{lon},{lat},{gps_acc:.1f},{base_lat},{base_lon},{novatel_lat},{novatel_lon},{wifi_strength},{gx5_heading:.1f},{base_imu_heading:.1f}\n')
-      data_pt_i += 1
-      next_update = t + 1. / update_rate    
+      update_due = t > next_update
+      print(update_due)
+      # this will filter maybe a few lines at the start
+      update_due &= (lat != None)
+      update_due &= (lon != None)
+      update_due &= (base_lat != None)
+      update_due &= (base_lon != None)
+      update_due &= (base_imu_heading != None)
+      update_due &= (gx5_heading != None)
+      update_due &= (gps_acc != None)
+      update_due &= (wifi_strength != None)
+      if update_due:
+        csv_f.write(f'{lon},{lat},{gps_acc:.1f},{base_lat},{base_lon},{novatel_lat},{novatel_lon},{wifi_strength},{gx5_heading:.1f},{base_imu_heading:.1f}\n')
+        data_pt_i += 1
+        next_update = t + 1. / update_rate    
   bag.close()
   print(f'Number of datapoints: {data_pt_i}')
 
