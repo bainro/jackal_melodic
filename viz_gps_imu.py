@@ -32,11 +32,17 @@ _help = "size in pixels to save the dataset images"
 parser.add_argument('--size', type=int, default=256, help=_help)
 args = parser.parse_args()
 
+with open(os.path.join(args.out_dir, "meta_data.csv"), "w") as meta_data_file:
+    meta_data_file.write("gps_acc,Longitude,Latitude\n")
+    for i in range(len(lats)):
+      meta_data_file.write(f'{gps_accs[i]:.1f},{longs[i]},{lats[i]}\n')
+
 if __name__ == "__main__":
   lat, lon, heading, gps_acc = None, None, None, None
   bag = rosbag.Bag(args.bag_file)
-  update_due = False
+  next_update = 0
   update_rate = 5 # Hz
+  data_pt_i = 0
   for topic, msg, t in bag.read_messages():
     if "fone_gps/fix" in topic:
         lat = msg.latitude
@@ -48,29 +54,27 @@ if __name__ == "__main__":
         heading = yaw
       elif "fone_gps/acc" in topic:
         gps_acc = msg.data
-    update_due = (not update_due and ...)
+
+    print(t);exit()
+    update_due = t > next_update
     # this will filter maybe a few lines at the start
     update_due = (update_due and lat != None)
     update_due = (update_due and long != None)
     update_due = (update_due and heading != None)
     update_due = (update_due and gps_acc != None)
     if update_due:
-      update_due = False
+      data_pt_i += 1
+      next_update = t + 1. / update_rate
       
   bag.close()
 
-  print(f'Number of datapoints: {len(lats)}')
-  if not (len(lats) == len(longs) == len(gps_accs)):
-    # headings = headings[:-1]
-    lats = lats[:-1]
-    longs = longs[:-1]
-  _str = f'Not parallel lists! ({len(lats)},{len(longs)},{len(gps_accs)})'
-  assert len(lats) == len(longs) == len(gps_accs),  _str
+  print(f'Number of datapoints: {data_pt_i}')
 
-  with open(os.path.join(args.out_dir, "meta_data.csv"), "w") as meta_data_file:
-    meta_data_file.write("gps_acc,Longitude,Latitude\n")
-    for i in range(len(lats)):
-      meta_data_file.write(f'{gps_accs[i]:.1f},{longs[i]},{lats[i]}\n')
+  ########################
+  ########################
+           exit()
+  ########################
+  ########################
 
   # normalize lat & long
   _lats, _longs = [], []
