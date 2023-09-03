@@ -153,7 +153,7 @@ if __name__ == "__main__":
       y = longs[i] * math.cos(rot) + lats[i] * math.sin(rot)
       trans_path_y.append(scale * (-y + y_off))
     # overlay the path on the map 
-    plt.scatter(x=trans_path_x, y=trans_path_y, c=colors, s=3)
+    plt.scatter(x=trans_path_x, y=trans_path_y, c=colors, s=25)
     plt.show(block=False)
     plt.pause(0.001)
     with kb.Listener(on_press=kp, on_release=kr) as listener:
