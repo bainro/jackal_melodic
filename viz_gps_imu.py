@@ -43,31 +43,31 @@ if __name__ == "__main__":
   data_pt_i = 0
   with open(os.path.join(args.out_dir, "gEarth_data.csv"), "w") as csv_f:  
     csv_f.write("Android Latitude,Android Longitude,Android GPS Accuracy,Base GPS Lat,Base GPS Lon,Novatel Lat, Novatel Lon,Wifi Signal Strength,gx5 heading,base imu heading\n")
-  for topic, msg, t in bag.read_messages():
-    t = t.to_sec()
-    if "fone_gps/fix" in topic:
-      lat = msg.latitude
-      lon = msg.longitude
-    if "navsat/fix" in topic:
-      base_lat = msg.latitude
-      base_lon = msg.longitude
-    if "novatel/fix" in topic:
-      novatel_lat = msg.latitude
-      novatel_lon = msg.longitude
-    elif "gx5/mag" in topic:
-      x = msg.magnetic_field.x
-      y = msg.magnetic_field.y
-      yaw = np.arctan2(y, x)
-      gx5_heading = yaw
-    elif "imu/mag" in topic:
-      x = msg.magnetic_field.x
-      y = msg.magnetic_field.y
-      yaw = np.arctan2(y, x)
-      base_imu_heading = yaw
-    elif "fone_gps/acc" in topic:
-      gps_acc = msg.data
-    elif "wifi_strength" in topic:
-      wifi_strength = msg.data
+    for topic, msg, t in bag.read_messages():
+      t = t.to_sec()
+      if "fone_gps/fix" in topic:
+        lat = msg.latitude
+        lon = msg.longitude
+      if "navsat/fix" in topic:
+        base_lat = msg.latitude
+        base_lon = msg.longitude
+      if "novatel/fix" in topic:
+        novatel_lat = msg.latitude
+        novatel_lon = msg.longitude
+      elif "gx5/mag" in topic:
+        x = msg.magnetic_field.x
+        y = msg.magnetic_field.y
+        yaw = np.arctan2(y, x)
+        gx5_heading = yaw
+      elif "imu/mag" in topic:
+        x = msg.magnetic_field.x
+        y = msg.magnetic_field.y
+        yaw = np.arctan2(y, x)
+        base_imu_heading = yaw
+      elif "fone_gps/acc" in topic:
+        gps_acc = msg.data
+      elif "wifi_strength" in topic:
+        wifi_strength = msg.data
 
     update_due = t > next_update
     # this will filter maybe a few lines at the start
@@ -82,10 +82,8 @@ if __name__ == "__main__":
     if update_due:
       csv_f.write(f'{lon},{lat},{gps_acc:.1f},{base_lat},{base_lon},{novatel_lat},{novatel_lon},{wifi_strength},{gx5_heading:.1f},{base_imu_heading:.1f}\n')
       data_pt_i += 1
-      next_update = t + 1. / update_rate
-      
+      next_update = t + 1. / update_rate    
   bag.close()
-
   print(f'Number of datapoints: {data_pt_i}')
 
   ########################
