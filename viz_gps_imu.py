@@ -33,7 +33,7 @@ parser.add_argument('--size', type=int, default=256, help=_help)
 args = parser.parse_args()
 
 if __name__ == "__main__":
-  gx5_heading, wifi_str = None, None
+  gx5_heading, wifi_strength = None, None
   base_imu_heading, gps_acc = None, None
   lat, lon = None, None
   base_lat, base_lon = None, None
@@ -48,14 +48,26 @@ if __name__ == "__main__":
     if "fone_gps/fix" in topic:
       lat = msg.latitude
       lon = msg.longitude
+    if "navsat/fix" in topic:
+      base_lat = msg.latitude
+      base_lon = msg.longitude
+    if "novatel/fix" in topic:
+      novatel_lat = msg.latitude
+      novatel_lon = msg.longitude
     elif "gx5/mag" in topic:
       x = msg.magnetic_field.x
       y = msg.magnetic_field.y
       yaw = np.arctan2(y, x)
-      heading = yaw
+      gx5_heading = yaw
+    elif "imu/mag" in topic:
+      x = msg.magnetic_field.x
+      y = msg.magnetic_field.y
+      yaw = np.arctan2(y, x)
+      base_imu_heading = yaw
     elif "fone_gps/acc" in topic:
       gps_acc = msg.data
-    # /wifi_strength /imu/heading /novatel/fix /navsat/fix
+    elif "wifi_strength" in topic:
+      wifi_strength = msg.data
 
     print(t);exit()
     update_due = t > next_update
@@ -65,8 +77,7 @@ if __name__ == "__main__":
     update_due = (update_due and heading != None)
     update_due = (update_due and gps_acc != None)
     if update_due:
-      csv_f.write(f'{lon},{lat},{gps_acc},{base_lat},{base_lon},{novatel_lat},{novatel_lon},{wifi_str},{gx5_heading:.1f},{base_imu_heading:.1f}\n')
-      Android Latitude,Android Longitude,Android GPS Accuracy,Base GPS Lat,Base GPS Lon,Novatel Lat, Novatel Lon,Wifi Signal Strength,gx5 heading,base imu heading
+      csv_f.write(f'{lon},{lat},{gps_acc:.1f},{base_lat},{base_lon},{novatel_lat},{novatel_lon},{wifi_strength},{gx5_heading:.1f},{base_imu_heading:.1f}\n')
       data_pt_i += 1
       next_update = t + 1. / update_rate
       
