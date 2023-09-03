@@ -33,27 +33,30 @@ parser.add_argument('--size', type=int, default=256, help=_help)
 args = parser.parse_args()
 
 if __name__ == "__main__":
-  lats, longs, headings, gps_accs = [], [], [], []
+  lat, lon, heading, gps_acc = None, None, None, None
   bag = rosbag.Bag(args.bag_file)
-  # helps keep the 2 parallel
-  new_acc = True
+  update_due = False
+  update_rate = 5 # Hz
   for topic, msg, t in bag.read_messages():
     if "fone_gps/fix" in topic:
-      if new_acc:
-        lats.append(msg.latitude)
-        longs.append(msg.longitude)
-        new_acc = False      
-    elif "fone_gps/acc" in topic: # "gx5/mag":
-      if new_acc: 
-        continue
-      new_acc = True
-      #x = msg.magnetic_field.x
-      #y = msg.magnetic_field.y
-      #yaw = np.arctan2(y, x)
-      #headings.append(yaw)
-      gps_accs.append(msg.data)
-    else:
-      continue
+        lat = msg.latitude
+        lon = msg.longitude
+      elif "gx5/mag" in topic:
+        x = msg.magnetic_field.x
+        y = msg.magnetic_field.y
+        yaw = np.arctan2(y, x)
+        heading = yaw
+      elif "fone_gps/acc" in topic:
+        gps_acc = msg.data
+    update_due = (not update_due and ...)
+    # this will filter maybe a few lines at the start
+    update_due = (update_due and lat != None)
+    update_due = (update_due and long != None)
+    update_due = (update_due and heading != None)
+    update_due = (update_due and gps_acc != None)
+    if update_due:
+      update_due = False
+      
   bag.close()
 
   print(f'Number of datapoints: {len(lats)}')
