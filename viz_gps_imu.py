@@ -46,7 +46,7 @@ if __name__ == "__main__":
     csv_f.write("Android Latitude,Android Longitude,Android GPS Accuracy,Base GPS Lat,Base GPS Lon,Novatel Lat, Novatel Lon,Wifi Signal Strength,gx5 heading,base imu heading\n")
   for topic, msg, _t in bag.read_messages():
     print(dir(t))
-    t = msg.header.timestamp.to_sec()
+    t = msg.header.stamp.to_sec()
     if "fone_gps/fix" in topic:
       lat = msg.latitude
       lon = msg.longitude
