@@ -45,7 +45,7 @@ if __name__ == "__main__":
   with open(os.path.join(args.out_dir, "gEarth_data.csv"), "w") as csv_f:  
     csv_f.write("Android Latitude,Android Longitude,Android GPS Accuracy,Base GPS Lat,Base GPS Lon,Novatel Lat, Novatel Lon,Wifi Signal Strength,gx5 heading,base imu heading\n")
   for topic, msg, _t in bag.read_messages():
-    t = msg.header.stamp / 1e6 # convert ns to sec
+    t = float(msg.header.stamp) / 1e6 # convert ns to sec
     if "fone_gps/fix" in topic:
       lat = msg.latitude
       lon = msg.longitude
