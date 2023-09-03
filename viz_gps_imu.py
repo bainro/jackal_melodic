@@ -43,8 +43,8 @@ if __name__ == "__main__":
   data_pt_i = 0
   with open(os.path.join(args.out_dir, "gEarth_data.csv"), "w") as csv_f:  
     csv_f.write("Android Latitude,Android Longitude,Android GPS Accuracy,Base GPS Lat,Base GPS Lon,Novatel Lat, Novatel Lon,Wifi Signal Strength,gx5 heading,base imu heading\n")
-    for topic, msg, _t in bag.read_messages():
-      t = _t.to_sec()
+    for topic, msg, t in bag.read_messages():
+      t = t.to_sec()
       if "fone_gps/fix" in topic:
         lat = msg.latitude
         lon = msg.longitude
@@ -70,6 +70,7 @@ if __name__ == "__main__":
         wifi_strength = msg.data
 
     update_due = t > next_update
+    print(update_due)
     # this will filter maybe a few lines at the start
     update_due &= (lat != None)
     update_due &= (lon != None)
@@ -82,7 +83,7 @@ if __name__ == "__main__":
     if update_due:
       csv_f.write(f'{lon},{lat},{gps_acc:.1f},{base_lat},{base_lon},{novatel_lat},{novatel_lon},{wifi_strength},{gx5_heading:.1f},{base_imu_heading:.1f}\n')
       data_pt_i += 1
-      next_update = _t + 1. / update_rate    
+      next_update = t + 1. / update_rate    
   bag.close()
   print(f'Number of datapoints: {data_pt_i}')
 
