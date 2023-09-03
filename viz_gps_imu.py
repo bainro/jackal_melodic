@@ -32,17 +32,18 @@ _help = "size in pixels to save the dataset images"
 parser.add_argument('--size', type=int, default=256, help=_help)
 args = parser.parse_args()
 
-with open(os.path.join(args.out_dir, "meta_data.csv"), "w") as meta_data_file:
-    meta_data_file.write("gps_acc,Longitude,Latitude\n")
-    for i in range(len(lats)):
-      meta_data_file.write(f'{gps_accs[i]:.1f},{longs[i]},{lats[i]}\n')
-
 if __name__ == "__main__":
-  lat, lon, heading, gps_acc = None, None, None, None
+  gx5_heading, wifi_str = None, None
+  base_imu_heading, gps_acc = None, None
+  lat, lon = None, None
+  base_lat, base_lon = None, None
+  novatel_lat, novatel_lon = None, None  
   bag = rosbag.Bag(args.bag_file)
   next_update = 0
   update_rate = 5 # Hz
   data_pt_i = 0
+  with open(os.path.join(args.out_dir, "gEarth_data.csv"), "w") as csv_f:  
+    csv_f.write("Android Latitude,Android Longitude,Android GPS Accuracy,Base GPS Lat,Base GPS Lon,Novatel Lat, Novatel Lon,Wifi Signal Strength,gx5 heading,base imu heading,\n")
   for topic, msg, t in bag.read_messages():
     if "fone_gps/fix" in topic:
       lat = msg.latitude
@@ -54,6 +55,7 @@ if __name__ == "__main__":
       heading = yaw
     elif "fone_gps/acc" in topic:
       gps_acc = msg.data
+    # /wifi_strength /imu/heading /novatel/fix /navsat/fix
 
     print(t);exit()
     update_due = t > next_update
@@ -63,6 +65,8 @@ if __name__ == "__main__":
     update_due = (update_due and heading != None)
     update_due = (update_due and gps_acc != None)
     if update_due:
+      csv_f.write(f'{lon},{lat},{lat:.1f}\n')
+      Android Latitude,Android Longitude,Android GPS Accuracy,Base GPS Lat,Base GPS Lon,Novatel Lat, Novatel Lon,Wifi Signal Strength,gx5 heading,base imu heading
       data_pt_i += 1
       next_update = t + 1. / update_rate
       
