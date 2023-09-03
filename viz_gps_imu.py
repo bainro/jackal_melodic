@@ -45,15 +45,15 @@ if __name__ == "__main__":
   data_pt_i = 0
   for topic, msg, t in bag.read_messages():
     if "fone_gps/fix" in topic:
-        lat = msg.latitude
-        lon = msg.longitude
-      elif "gx5/mag" in topic:
-        x = msg.magnetic_field.x
-        y = msg.magnetic_field.y
-        yaw = np.arctan2(y, x)
-        heading = yaw
-      elif "fone_gps/acc" in topic:
-        gps_acc = msg.data
+      lat = msg.latitude
+      lon = msg.longitude
+    elif "gx5/mag" in topic:
+      x = msg.magnetic_field.x
+      y = msg.magnetic_field.y
+      yaw = np.arctan2(y, x)
+      heading = yaw
+    elif "fone_gps/acc" in topic:
+      gps_acc = msg.data
 
     print(t);exit()
     update_due = t > next_update
