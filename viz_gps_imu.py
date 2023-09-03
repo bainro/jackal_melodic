@@ -41,6 +41,7 @@ if __name__ == "__main__":
   next_update = 0
   update_rate = 5 # Hz
   data_pt_i = 0
+  init_value_check = False
   with open(os.path.join(args.out_dir, "gEarth_data.csv"), "w") as csv_f:  
     csv_f.write("Android Latitude,Android Longitude,Android GPS Accuracy,Base GPS Lat,Base GPS Lon,Novatel Lat, Novatel Lon,Wifi Signal Strength,gx5 heading,base imu heading\n")
     for topic, msg, t in bag.read_messages():
@@ -70,15 +71,16 @@ if __name__ == "__main__":
         wifi_strength = msg.data
 
       update_due = t > next_update
-      # this will filter maybe a few lines at the start
-      update_due &= (lat != None)
-      update_due &= (lon != None)
-      update_due &= (base_lat != None)
-      update_due &= (base_lon != None)
-      update_due &= (base_imu_heading != None)
-      update_due &= (gx5_heading != None)
-      update_due &= (gps_acc != None)
-      update_due &= (wifi_strength != None)
+      # this will filter at most 1 line
+      if not init_value_check:
+        update_due &= (lat != None)
+        update_due &= (lon != None)
+        update_due &= (base_lat != None)
+        update_due &= (base_lon != None)
+        update_due &= (base_imu_heading != None)
+        update_due &= (gx5_heading != None)
+        update_due &= (gps_acc != None)
+        update_due &= (wifi_strength != None)
       if update_due:
         csv_f.write(f'{lon},{lat},{gps_acc:.1f},{base_lat},{base_lon},{novatel_lat},{novatel_lon},{wifi_strength},{gx5_heading:.1f},{base_imu_heading:.1f}\n')
         data_pt_i += 1
