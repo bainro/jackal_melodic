@@ -82,7 +82,7 @@ if __name__ == "__main__":
         update_due &= (gps_acc != None)
         update_due &= (wifi_strength != None)
       if update_due:
-        csv_f.write(f'{lon},{lat},{gps_acc:.1f},{base_lat},{base_lon},{novatel_lat},{novatel_lon},{wifi_strength},{gx5_heading:.1f},{base_imu_heading:.1f}\n')
+        csv_f.write(f'{lat},{lon},{gps_acc:.1f},{base_lat},{base_lon},{novatel_lat},{novatel_lon},{wifi_strength},{gx5_heading:.1f},{base_imu_heading:.1f}\n')
         data_pt_i += 1
         next_update = t + 1. / update_rate    
   bag.close()
