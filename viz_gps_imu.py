@@ -70,7 +70,6 @@ if __name__ == "__main__":
         wifi_strength = msg.data
 
       update_due = t > next_update
-      print(update_due)
       # this will filter maybe a few lines at the start
       update_due &= (lat != None)
       update_due &= (lon != None)
