@@ -1,4 +1,5 @@
 #/bin/bash
+echo "remove all the 'sudo's for the jetson nano"
 if [ $(lsb_release -sc) != "bionic" ]; then 
 	echo "Error: Ubuntu 18.04 is required for ROS melodic."
 	exit
