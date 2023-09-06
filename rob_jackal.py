@@ -5,9 +5,11 @@ import math
 import rospy
 import pickle
 import numpy as np
+import argparse
 from std_msgs.msg import Float32
 from nav_msgs.msg import Odometry
 from placecell import PlaceNetwork
+from utils import loadNetwork, saveNetwork, levy_flight, get_distance
 from jackal_msgs.msg import Feedback
 from geometry_msgs.msg import Twist, PoseStamped
 from actionlib_msgs.msg import GoalStatusArray, GoalStatus
@@ -57,6 +59,19 @@ class JackalController:
         # used to speedup calibration
         self.last_heading_i = 0
         self.has_calibrated = False
+
+        #COST: CURRENT
+        self.numcurrent = 0
+        self.totalcurrent = 0
+
+        #COST: OBSTACLE
+        self.obspenalty = 0
+        self.obstotal = 0
+
+        #COST: GPSACC
+        self.numgpsacc = 0
+        self.totalgpsacc = 0
+
 
         if lidar:
             self.createLidarListener(lidartopic)
@@ -127,6 +142,30 @@ class JackalController:
         msg = self.makeTwist(linear, 0, 0, 0, 0, rotational)
         self.drivernode.publish(msg)
 
+    def resetCostTracker(self):
+        """
+        Sets total current read and number of current readings back to 0. Call when entering new waypoint to get new average.
+        """
+        #COST: CURRENT
+        self.numcurrent = 0
+        self.totalcurrent = 0
+
+        #COST: OBSTACLE
+        self.obspenalty = 0
+        self.obstotal = 0
+
+        #COST: GPSACC
+        self.numgpsacc = 0
+        self.totalgpsacc = 0
+
+    def computeCost(self):
+        currentcost = self.totalcurrent / self.numcurrent
+        obs = self.obspenalty / self.obstotal
+        gpsacc = self.totalgpsacc / self.numgpsacc
+
+        #TODO: Add other costs and normalizing stuff
+
+        return [currentcost, obs, gpsacc]
 
     def driveToWaypoint(self, latitude, longitude):
         """
@@ -135,14 +174,19 @@ class JackalController:
         """
         #self.turnToWaypoint(latitude, longitude)
 
-		#Start tracking cost after turning to directionb
+		#Start tracking cost after turning to direction
+        self.resetCostTracker()
+
+
         ang, dist = self.getAngleDistance((self.latitude, self.longitude), (latitude, longitude))
         while dist > 0.75:
             self.driveToward(ang, dist)
             print("Distance to waypoint " + str(dist) + " | Heading " + str(self.heading) + " Angle to bearing: " + str(ang))
             ang, dist = self.getAngleDistance((self.latitude, self.longitude), (latitude, longitude))
 
-    def driveToward(self, angle, dist):
+        return self.computeCost()
+
+    def driveToward(self, angle):
         """
         Issues a single command toward the desired angle, returns distance 
         """
@@ -152,14 +196,33 @@ class JackalController:
         #    self.avoidancetime += 1
         #else:
         if self.heading < angle - padding:
-            self.Drive(0.0, 0.5)
+            self.Drive(0.1, 0.5)
         elif self.heading > angle  + padding:					
-            self.Drive(0.0, -0.5)
+            self.Drive(0.1, -0.5)
         else:
             self.Drive(0.5, 0)
 
         #self.drivetime += 1
         self.rate.sleep()
+
+    def drivePath(self, path, network):
+        """
+		Drives Jackal to path, return costs.
+		"""
+        costs = []
+        for i in range(len(path)):
+            point = network.cells[network.points[(path[0], path[1])]].origin
+            latitude = point[0]
+            longitude = point[1]
+            print("Driving to waypoint (%d, %d) at (%f, %f)" % (path[i][0], path[i][1], latitude, longitude))
+
+            cost = self.driveToWaypoint(latitude, longitude)
+
+            #Do not update initial waypoint
+            if i != 0:
+                print("Computed cost for this path: %f" % cost)
+                print("Updating at %d, %d" % (path[i][0], path[i][1]))
+                costs.append(cost)
 
     ###MOVE BASE####
     def createGoalPublisher(self):
@@ -229,6 +292,20 @@ class JackalController:
         Handles Lidar data
         """
         self.lidardata = data
+        self.scan = data.ranges[170:370]
+
+    def checkForObstacle(self):
+        consecutive = 0
+        for i, val in enumerate(self.scan):
+            if val > 0.1 and val < 2:
+                consecutive += 1
+            else:
+                consecutive = 0
+
+            if consecutive > 15:#self.consecutivethreshold:
+                return True
+
+        return False
 
     ### STATUS ###
     def createStatusListener(self, topic):
@@ -236,6 +313,8 @@ class JackalController:
         Subscriber to Jackalstr Status topic
         """
         self.statusnode = rospy.Subscriber(topic, Feedback, self.updateStatus)
+        self.numcurrent += min(data.drivers[0].current, data.drivers[1].current)
+        self.totalcurrent += 1
 
     def updateStatus(self, data):
         """
@@ -352,6 +431,9 @@ class JackalController:
         self.gps_acc = m.data
         # print(f'gps_acc: {self.gps_acc}')
 
+        self.numgpsacc += 1
+        self.totalgpsacc += self.gps_acc
+
     ### ODOM ###
     def createOdomListener(self, topic):
         """
@@ -465,46 +547,110 @@ if __name__ == "__main__":
     os.system("kill -9 $(pgrep -f 'python grab_gps')")
     os.system("python grab_gps.py &")
 
-    test = JackalController(headingtopic='gx5/mag', gpstopic='fone_gps/fix')
-    test.awaitReadings()
+    # Initialize argparser
+    parser = argparse.ArgumentParser(
+                    prog='Jackal Spikewave',
+                    description='Spiking Wavefront Propagation with Jackal')
+    parser.add_argument('--type', '-t', type=str, default='single', help='Specifies the test type (spikewave, single, test)')
+    parser.add_argument('--trials', '-n', type=int, default=10, help='Number of trials for spikewave test')
+    parser.add_argument('--rosbag', '-rosbag', type=bool, default=True, help='Record rosbag (T/F)')
+    args = parser.parse_args()
+
+    # Initialize Jackal Controller and Calibrate
+    jackal = JackalController(headingtopic='gx5/mag', gpstopic='fone_gps/fix')
+    jackal.awaitReadings()
     if os.path.exists("calib.pkl"):
         with open("calib.pkl", "rb") as f:
             a = pickle.load(f, encoding='bytes')
-            test.uncalib_i = a[0]
-            test.calib_o = a[1]
-            test.has_calibrated = True
+            jackal.uncalib_i = a[0]
+            jackal.calib_o = a[1]
+            jackal.has_calibrated = True
     else:
-        test.calibHeading()
+        jackal.calibHeading()
         with open("calib.pkl", "wb") as f:
-            pickle.dump([test.uncalib_i, test.calib_o], f)
+            pickle.dump([jackal.uncalib_i, jackal.calib_o], f)
 
-    test.rosbag() # start recording
-
-    # SBSG waypoints
-    # [33.64753, -117.83918] # Lab
-    # [33.64755, -117.83737] # Parking
-    # [33.65073, -117.83830] # Two asprin
-    # [33.64542, -117.84073] # Einsteins
-
-    # Park waypoints
-    # [33.64659, -117.84304]   # Intersection
-    # [33.64721, -117.84289]   # End of dirt road
-    # [33.646727, -117.843020] # Halfway dirt road
-
-    '''
+    # Find place network if exists, otherwise create it
     network = PlaceNetwork()
-    network.initAldritch()
-    network.initConnections()
+    if os.path.exists("wgts.pkl"):
+        data = loadNetwork("test")
+        network.loadFromFile(data)
+    else:
+        network.initAldritch()
+        network.initConnections()
 
-    path = network.spikeWave(network.points[(0, 0)], network.points[(0, 0)])
-    for point in path[::-1]:
-        print("Moving to waypoint: " + str(network.cells[point].origin[0]) + ", "  + str(network.cells[point].origin[1]))
-        test.driveToWaypoint(network.cells[point].origin[0], network.cells[point].origin[1])
-        test.turnToWaypoint(test.latitude, test.longitude, network.cells[point].origin[0], network.cells[point].origin[1])
-    '''
+
+    if args.rosbag:
+        jackal.rosbag() # start recording
+
+
+    if args.type == 'test':
+        # SBSG waypoints
+        # [33.64753, -117.83918] # Lab
+        # [33.64755, -117.83737] # Parking
+        # [33.65073, -117.83830] # Two asprin
+        # [33.64542, -117.84073] # Einsteins
+        # Park waypoints
+        test1 = [33.64659, -117.84304]   # Intersection
+        test2 = [33.64721, -117.84289]   # End of dirt road
+        # [33.646727, -117.843020] # Halfway dirt road
+    elif args.type == 'single':
+        print("TODO")
+        #path = network.spikeWave(network.points[(0, 0)], network.points[(5, 5)])
+    elif args.type == 'spikewave':
+
+        wp_end = np.array([5, 5])
+        wp_start = np.copy(wp_end)
+
+        n1 = network.mapsizelat
+        n2 = network.mapsizelon
+
+        t = 0
+        trials = args.trials
+        while t < trials:
+            lf = levy_flight(2, 3)  # levy_flight will return a new waypoint
+            # waypoint coordinates must be whole numbers
+            wp_end[0] += round(lf[0])
+            # check that the waypoint is within the map boundaries
+            if wp_end[0] < 0:
+                wp_end[0] = 0
+            elif wp_end[0] >= n1:
+                wp_end[0] = n1-1
+
+            wp_end[1] += round(lf[1])
+            if wp_end[1] < 0:
+                wp_end[1] = 0
+            elif wp_end[1] >= n1:
+                wp_end[1] = n1-1
+
+            print("Path %d from %d,%d to %d,%d" % (t+1, wp_start[0], wp_start[1], wp_end[0], wp_end[1]))
+
+            # if the new waypoint is not over 1 grid position away from the current position,
+            #     skip this waypoint and find another.
+            if get_distance(wp_start, wp_end) > 1:
+                t += 1
+                p = network.spikeWave(wp_start, wp_end, costmap=0)
+                costs = jackal.drivePath(p[::-1], network)
+
+                # set wp_end to the end of the path just in case path was not reached.
+                wp_end = np.array([p[0][0], p[0][1]])
+                wp_start = np.copy(wp_end)
+
+                #UPDATE
+                network.eProp(costs, p)
+            
+        
+
+    #for point in path[::-1]:
+    #    print("Moving to waypoint: " + str(network.cells[point].origin[0]) + ", "  + str(network.cells[point].origin[1]))
+    #    jackal.driveToWaypoint(network.cells[point].origin[0], network.cells[point].origin[1])
+    #    jackal.turnToWaypoint(jackal.latitude, jackal.longitude, network.cells[point].origin[0], network.cells[point].origin[1])
+    
 
     try:
         input("Press ENTER to terminate script")
     except KeyboardInterrupt: # hmm, doesn't work
         pass
-    test.rosbag(False) # stop recording
+
+    if args.rosbag:
+        jackal.rosbag(False) # stop recording
