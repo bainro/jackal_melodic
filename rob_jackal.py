@@ -97,7 +97,7 @@ class JackalController:
         if record:
             self.bag_file = f'{int(time.time())}' + '.bag'
             # @TODO don't hard-code the wifi topic
-            bash_cmd = f'rosbag record -O {self.bag_file} {self.lidartopic} {self.statustopic} {self.headingtopic} '
+            bash_cmd = f'rosbag record -O {self.bag_file} {self.lidartopic} {self.statustopic} {self.headingtopic} /image_proc_resize/image '
             bash_cmd += f'{self.gpstopic} {self.odomtopic} {self.gps_acc_topic} /wifi_strength &' # background
             os.system(bash_cmd)
         else:
