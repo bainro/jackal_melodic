@@ -1,4 +1,5 @@
 # apply calibration results to imu's magnetometer & publish in ROS
+### realized midway thru we no need...
 import os
 import sys
 import rospy
@@ -6,7 +7,10 @@ from sensor_msgs.msg import MagneticField
 
 mag_pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
 def repub_mag(msg):
-  
+  x = msg.magnetic_field.x
+  y = msg.magnetic_field.y
+  z = msg.magnetic_field.z
+  w = msg.magnetic_field.w
   mag_pub.publish(msg)
 
 if __name__ == '__main__':
