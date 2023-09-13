@@ -543,9 +543,14 @@ if __name__ == "__main__":
 
     # kill any previously running instances
     os.system("kill -9 $(pgrep -f 'python wifi_ros.py')")
-    os.system("python wifi_ros.py &")
+    os.system("python wifi_ros.py &") # wifi pub
     os.system("kill -9 $(pgrep -f 'python grab_gps')")
-    os.system("python grab_gps.py &")
+    os.system("python grab_gps.py &") # phone gps pub
+    os.system("kill -9 $(standalone image_proc/resize image:=/camera/image)")
+    resize_cmd = "rosrun nodelet nodelet standalone image_proc/resize \
+                  image:=/camera/image camera_info:=/camera/camera_info \
+                  _scale_width:=0.5 _scale_height:=0.5 &"
+    os.system(resize_cmd) # resize camera img 
 
     # Initialize argparser
     parser = argparse.ArgumentParser(
