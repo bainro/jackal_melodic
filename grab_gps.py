@@ -20,7 +20,7 @@ class S(BaseHTTPRequestHandler):
         global lon
         global acc
         lat, lon, acc = 666, 666, 0 # test values
-        print("TEST SUCCESSFUL")
+        #print("TEST SUCCESSFUL")
     def do_POST(self):
         global lat
         global lon
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     httpd = HTTPServer(server_address, S)
 
     rospy.init_node("fone_gps")
-    rate = rospy.Rate(2) # 2Hz
+    rate = rospy.Rate(4) # 4Hz
     lat_long_pub = rospy.Publisher("/fone_gps/fix", NavSatFix, queue_size=10)
     acc_pub = rospy.Publisher("/fone_gps/acc", Float32, queue_size=10)
 

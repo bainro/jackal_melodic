@@ -154,6 +154,7 @@ class PlaceNetwork:
         for i in range(self.mapsizelat):
             for j in range(self.mapsizelon):
                 self.points[(i, j)] = id
+                self.points[id] = (i, j)
                 id += 1
 
     def initConnections(self):
@@ -174,8 +175,8 @@ class PlaceNetwork:
         Performs spikewave propogation on graph.
         """
 
-        startID = self.points[startPt]
-        goalID = self.points[goalPt]
+        startID = self.points[startPt[0], startPt[1]]
+        goalID = self.points[goalPt[0], goalPt[1]]
 
         #Reset all neurons
         for cell in self.cells:

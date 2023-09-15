@@ -6,7 +6,7 @@ import rospy
 import pickle
 import numpy as np
 import argparse
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, Int32
 from nav_msgs.msg import Odometry
 from placecell import PlaceNetwork
 from utils import loadNetwork, saveNetwork, levy_flight, get_distance
@@ -29,9 +29,11 @@ class JackalController:
                  heading = True,
                  headingtopic = '/imu/data',
                  gps = True,
-                 gpstopic = 'navsat/fix',
+                 gpstopic = '/fone_gps/fix',
                  odom = True,
                  odomtopic = 'odometry/filtered',
+                 wifi = True,
+                 wifi_acc_topic = '/wifi_strength',
                  gps_acc_topic = '/fone_gps/acc'):
         
         # Creates publisher for making drive commands
@@ -60,6 +62,10 @@ class JackalController:
         self.last_heading_i = 0
         self.has_calibrated = False
 
+        #Obstacle Avoidance
+        self.blocked = False
+        self.blockdir = 0
+
         #COST: CURRENT
         self.numcurrent = 0
         self.totalcurrent = 0
@@ -72,6 +78,9 @@ class JackalController:
         self.numgpsacc = 0
         self.totalgpsacc = 0
 
+        #COST: WIFI
+        self.wificounter = 0
+        self.wifitotal = 0
 
         if lidar:
             self.createLidarListener(lidartopic)
@@ -89,6 +98,17 @@ class JackalController:
         if odom:
             self.createOdomListener(odomtopic)
             self.odomtopic = odomtopic
+        if wifi:
+            self.createWifiListener(wifi_acc_topic)
+            self.wifitopic = wifi_acc_topic
+
+    def createWifiListener(self, topic):
+        self.wifinode = rospy.Subscriber(topic, Int32, self.wifiCallback)
+
+    def wifiCallback(self, data):
+        self.wifistrength = float(data.data)
+        self.wificounter += 1
+        self.wifitotal += self.wifistrength
 
     def rosbag(self, record=True):
         # Records rosbag for offline analysis. 
@@ -96,13 +116,13 @@ class JackalController:
         # start recording
         if record:
             self.bag_file = f'{int(time.time())}' + '.bag'
-            # @TODO don't hard-code the wifi topic
             bash_cmd = f'rosbag record -O {self.bag_file} {self.lidartopic} {self.statustopic} {self.headingtopic} /image_proc_resize/image '
             bash_cmd += f'{self.gpstopic} {self.odomtopic} {self.gps_acc_topic} /wifi_strength &' # background
             os.system(bash_cmd)
         else:
             # try stopping any already running rosbag recordings
-            os.system(f'kill $(pgrep -f "rosbag record -O {self.bag_file}")')
+            bash_cmd = f'kill $(pgrep -f "rosbag record -O {self.bag_file}")'
+            os.system(bash_cmd)
 
     def createSimpleDriver(self):
         """
@@ -158,14 +178,28 @@ class JackalController:
         self.numgpsacc = 0
         self.totalgpsacc = 0
 
+        #COST: WIFIACC
+        self.wifitotal = 0
+        self.wificounter = 0
+        
+
     def computeCost(self):
-        currentcost = self.totalcurrent / self.numcurrent
-        obs = self.obspenalty / self.obstotal
-        gpsacc = self.totalgpsacc / self.numgpsacc
+        if self.numcurrent != 0:
+            currentcost = self.totalcurrent / self.numcurrent
+        else: currentcost = 0
+        if self.obstotal != 0:
+            obs = self.obspenalty / self.obstotal
+        else: obs = 0
+        if self.numgpsacc != 0:
+            gpsacc = self.totalgpsacc / self.numgpsacc
+        else: gpsacc = 0
+        if self.wificounter != 0:
+            wifiacc = self.wifitotal / self.wificounter
+        else: wifiacc = 0
 
         #TODO: Add other costs and normalizing stuff
 
-        return [currentcost, obs, gpsacc]
+        return [currentcost, obs, gpsacc, wifiacc]
 
     def driveToWaypoint(self, latitude, longitude):
         """
@@ -180,8 +214,8 @@ class JackalController:
 
         ang, dist = self.getAngleDistance((self.latitude, self.longitude), (latitude, longitude))
         while dist > 0.75:
-            self.driveToward(ang, dist)
-            print("Distance to waypoint " + str(dist) + " | Heading " + str(self.heading) + " Angle to bearing: " + str(ang))
+            self.driveToward(ang)
+            #print("Distance to waypoint " + str(dist) + " | Heading " + str(self.heading) + " Angle to bearing: " + str(ang))
             ang, dist = self.getAngleDistance((self.latitude, self.longitude), (latitude, longitude))
 
         return self.computeCost()
@@ -191,36 +225,49 @@ class JackalController:
         Issues a single command toward the desired angle, returns distance 
         """
         padding = np.pi/12
-        #if self.blocked:
-            #self.Drive(self.drivespeed, self.blockdir * self.maxturnspeed)
-        #    self.avoidancetime += 1
-        #else:
-        if self.heading < angle - padding:
-            self.Drive(0.1, 0.5)
-        elif self.heading > angle  + padding:					
-            self.Drive(0.1, -0.5)
+        if self.blocked:
+            self.Drive(0.0, self.blockdir * 0.5)
+            self.obspenalty += 1
         else:
-            self.Drive(0.5, 0)
+            if abs(self.heading - angle) < np.pi:
+                if self.heading < angle - padding:
+                    self.Drive(0.5, 0.5)
+                elif self.heading > angle  + padding:					
+                    self.Drive(0.5, -0.5)
+                else:
+                    self.Drive(0.5, 0)
+            else:
+                if self.heading < angle - padding:
+                    self.Drive(0.5, -0.5)
+                elif self.heading > angle  + padding:					
+                    self.Drive(0.5, 0.5)
+                else:
+                    self.Drive(0.5, 0)
 
-        #self.drivetime += 1
+
+        self.obstotal += 1
         self.rate.sleep()
 
     def drivePath(self, path, network):
         """
 		Drives Jackal to path, return costs.
 		"""
+        #print(path)
         costs = []
         for i in range(len(path)):
-            point = network.cells[network.points[(path[0], path[1])]].origin
+            #point = network.cells[network.points[(path[0], path[1])]].origin
+            point = path[i]
             latitude = point[0]
             longitude = point[1]
             print("Driving to waypoint (%d, %d) at (%f, %f)" % (path[i][0], path[i][1], latitude, longitude))
+            self.turnToWaypoint(self.latitude, self.longitude, latitude, longitude)
 
             cost = self.driveToWaypoint(latitude, longitude)
 
             #Do not update initial waypoint
             if i != 0:
-                print("Computed cost for this path: %f" % cost)
+                print("Computed cost for this path:")
+                print(cost)
                 print("Updating at %d, %d" % (path[i][0], path[i][1]))
                 costs.append(cost)
 
@@ -293,19 +340,30 @@ class JackalController:
         """
         self.lidardata = data
         self.scan = data.ranges[170:370]
+        self.checkForObstacle()
 
-    def checkForObstacle(self):
+    def checkForObstacle(self):	
         consecutive = 0
+        points = []
         for i, val in enumerate(self.scan):
             if val > 0.1 and val < 2:
                 consecutive += 1
+                points.append(i)
             else:
                 consecutive = 0
+                points = []
 
-            if consecutive > 15:#self.consecutivethreshold:
-                return True
+            if consecutive > 15:
+                self.blocked = True
 
-        return False
+                #Turn right if the midpoint of the obstacle is on the left side
+                if points[int(len(points) / 2)] < len(self.scan) / 2:
+                    self.blockdir = -1
+                else:
+                    self.blockdir = 1
+                return
+
+        self.blocked = False
 
     ### STATUS ###
     def createStatusListener(self, topic):
@@ -313,14 +371,14 @@ class JackalController:
         Subscriber to Jackalstr Status topic
         """
         self.statusnode = rospy.Subscriber(topic, Feedback, self.updateStatus)
-        self.numcurrent += min(data.drivers[0].current, data.drivers[1].current)
-        self.totalcurrent += 1
 
     def updateStatus(self, data):
         """
         Handles Status data
         """
         self.statusdata = data
+        self.numcurrent += min(data.drivers[0].current, data.drivers[1].current)
+        self.totalcurrent += 1
 
     ### HEADING ###
     def createHeadingListener(self, topic):
@@ -451,6 +509,7 @@ class JackalController:
         y = data.pose.pose.orientation.y
         z = data.pose.pose.orientation.z
 
+        #ssert False
         _roll, _pitch, yaw = tf.transformations.euler_from_quaternion([x, y, z, w])
 
         self.odomheading = yaw
@@ -491,7 +550,7 @@ class JackalController:
         ang, dist = self.getAngleDistance((startlat, startlong),(endlat, endlong))
 
         while abs(self.heading - ang) > 0.05:
-            self.Drive(0, 0.25)
+            self.Drive(0, 0.50)
             self.rate.sleep()
             #print("HEADING " + str(self.heading) + " | BEARING " + str(ang))
 
@@ -546,11 +605,12 @@ if __name__ == "__main__":
     os.system("python wifi_ros.py &") # wifi pub
     os.system("kill -9 $(pgrep -f 'python grab_gps')")
     os.system("python grab_gps.py &") # phone gps pub
-    os.system("kill -9 $(standalone image_proc/resize image:=/camera/image)")
+    os.system("kill -9 $(pgrep -f 'standalone image_proc/resize image:=/camera/image')")
     resize_cmd = "rosrun nodelet nodelet standalone image_proc/resize \
                   image:=/camera/image camera_info:=/camera/camera_info \
                   _scale_width:=0.5 _scale_height:=0.5 &"
     os.system(resize_cmd) # resize camera img 
+
 
     # Initialize argparser
     parser = argparse.ArgumentParser(
@@ -558,7 +618,7 @@ if __name__ == "__main__":
                     description='Spiking Wavefront Propagation with Jackal')
     parser.add_argument('--type', '-t', type=str, default='single', help='Specifies the test type (spikewave, single, test)')
     parser.add_argument('--trials', '-n', type=int, default=10, help='Number of trials for spikewave test')
-    parser.add_argument('--rosbag', '-rosbag', type=bool, default=True, help='Record rosbag (T/F)')
+    parser.add_argument('--rosbag', '-rosbag', type=bool, default=False, help='Record rosbag (T/F)')
     args = parser.parse_args()
 
     # Initialize Jackal Controller and Calibrate
@@ -581,7 +641,7 @@ if __name__ == "__main__":
         data = loadNetwork("test")
         network.loadFromFile(data)
     else:
-        network.initAldritch()
+        network.initAldritch(numcosts=4)
         network.initConnections()
 
 
@@ -600,7 +660,21 @@ if __name__ == "__main__":
         test2 = [33.64721, -117.84289]   # End of dirt road
         # [33.646727, -117.843020] # Halfway dirt road
     elif args.type == 'single':
-        print("TODO")
+        wpstartx = int(input("start x"))
+        wpstarty = int(input("start y"))
+        wpendx = int(input("end x"))
+        wpendy = int(input("end y"))
+
+        p = network.spikeWave([wpstartx, wpstarty], [wpendx, wpendy], costmap=0)
+        wpts = [network.cells[i].origin for i in p]
+        pts = [network.points[i] for i in p]
+        print("Path: ")
+        print(pts[::-1])
+        costs = jackal.drivePath(wpts[::-1], network)
+
+        print("Costs for this path: ")
+        print(costs)
+
         #path = network.spikeWave(network.points[(0, 0)], network.points[(5, 5)])
     elif args.type == 'spikewave':
 
@@ -635,7 +709,14 @@ if __name__ == "__main__":
             if get_distance(wp_start, wp_end) > 1:
                 t += 1
                 p = network.spikeWave(wp_start, wp_end, costmap=0)
-                costs = jackal.drivePath(p[::-1], network)
+
+
+                wpts = [network.cells[i].origin for i in p]
+                pts = [network.points[i] for i in p]
+                print("Path: ")
+                print(pts[::-1])
+
+                costs = jackal.drivePath(wpts[::-1], network)
 
                 # set wp_end to the end of the path just in case path was not reached.
                 wp_end = np.array([p[0][0], p[0][1]])
