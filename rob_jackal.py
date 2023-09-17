@@ -201,7 +201,7 @@ class JackalController:
 
         return [currentcost, obs, gpsacc, wifiacc]
 
-    def driveToWaypoint(self, latitude, longitude):
+    def driveToWaypoint(self, latitude, longitude, timeout=False):
         """
         Drives Jackal to the coordinates. Returns a tuple (bool, float). bool is true for successfully reaching false for unsuccessful, float is the cost.
         latitude, longitude: coordinates
@@ -211,6 +211,9 @@ class JackalController:
 		#Start tracking cost after turning to direction
         self.resetCostTracker()
 
+        if timeout:
+            start_time = time.time()
+
 
         ang, dist = self.getAngleDistance((self.latitude, self.longitude), (latitude, longitude))
         while dist > 0.75:
@@ -218,7 +221,11 @@ class JackalController:
             #print("Distance to waypoint " + str(dist) + " | Heading " + str(self.heading) + " Angle to bearing: " + str(ang))
             ang, dist = self.getAngleDistance((self.latitude, self.longitude), (latitude, longitude))
 
-        return self.computeCost()
+            if timeout and time.time() - start_time > 10:
+                print("Could not reach waypoint in 10 seconds")
+                return None, False
+
+        return self.computeCost(), True
 
     def driveToward(self, angle):
         """
@@ -262,14 +269,27 @@ class JackalController:
             print("Driving to waypoint (%d, %d) at (%f, %f)" % (path[i][0], path[i][1], latitude, longitude))
             self.turnToWaypoint(self.latitude, self.longitude, latitude, longitude)
 
-            cost = self.driveToWaypoint(latitude, longitude)
+            if i == 0:
+                cost, completed = self.driveToWaypoint(latitude, longitude, False)
+            else:
+                cost, completed = self.driveToWaypoint(latitude, longitude, True)
 
             #Do not update initial waypoint
             if i != 0:
+                if cost is None and completed is False:
+                    print("Could not reach waypoint")
+                    costs.append([10 for costs in range(network.numcostss)])
+                    print("Returning to previous waypoint")
+                    self.turnToWaypoint(self.latitude, self.longitude, path[i-1][0], path[i-1][1])
+                    cost, completed = self.driveToWaypoint(path[i-1][0], path[i-1][1], False)
+                    break
+
                 print("Computed cost for this path:")
                 print(cost)
                 print("Updating at %d, %d" % (path[i][0], path[i][1]))
                 costs.append(cost)
+
+        return costs, i
 
     ###MOVE BASE####
     def createGoalPublisher(self):
@@ -689,18 +709,23 @@ if __name__ == "__main__":
         while t < trials:
             lf = levy_flight(2, 3)  # levy_flight will return a new waypoint
             # waypoint coordinates must be whole numbers
-            wp_end[0] += round(lf[0])
+            new_wp = (wp_start[0] + round(lf[0]), wp_start[1] + round(lf[1]))
+            while new_wp not in network.points:
+                lf = levy_flight(2, 3)
+                new_wp = (wp_start[0] + round(lf[0]), wp_start[1] + round(lf[1]))
+            wp_end = np.copy(new_wp)
             # check that the waypoint is within the map boundaries
-            if wp_end[0] < 0:
-                wp_end[0] = 0
-            elif wp_end[0] >= n1:
-                wp_end[0] = n1-1
 
-            wp_end[1] += round(lf[1])
-            if wp_end[1] < 0:
-                wp_end[1] = 0
-            elif wp_end[1] >= n1:
-                wp_end[1] = n1-1
+            #$if wp_end[0] < 0:
+            #   wp_end[0] = 0
+            #elif wp_end[0] >= n1:
+            #    wp_end[0] = n1-1
+
+            #wp_end[1] += round(lf[1])
+            #if wp_end[1] < 0:
+            #    wp_end[1] = 0
+            #elif wp_end[1] >= n1:
+            #    wp_end[1] = n1-1
 
             print("Path %d from %d,%d to %d,%d" % (t+1, wp_start[0], wp_start[1], wp_end[0], wp_end[1]))
 
@@ -716,8 +741,8 @@ if __name__ == "__main__":
                 print("Path: ")
                 print(pts[::-1])
 
-                costs = jackal.drivePath(wpts[::-1], network)
-
+                costs, reached = jackal.drivePath(wpts[::-1], network)
+                p = p[len(p) - 1 - reached:-1]
                 # set wp_end to the end of the path just in case path was not reached.
                 wp_end = np.array([p[0][0], p[0][1]])
                 wp_start = np.copy(wp_end)

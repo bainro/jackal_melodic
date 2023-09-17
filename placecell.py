@@ -75,17 +75,25 @@ class PlaceNetwork:
         ax.set_aspect('equal', adjustable='box')
         
         for cell in self.cells:
-            plt.plot(cell.origin[1], cell.origin[0], marker='o', color='red', zorder=2)
+            plt.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', color='red', zorder=2)
             #Annotate cell with ID
-            plt.annotate(cell.ID, (cell.origin[1], cell.origin[0]), color='blue', zorder=3, fontsize=8)
-            #plt.annotate(self.points[cell.ID], (cell.origin[1], cell.origin[0]), color='blue', zorder=3, fontsize=8)
+            #plt.annotate(cell.ID, (cell.origin[1], cell.origin[0]), color='blue', zorder=3, fontsize=8)
+            plt.annotate(self.points[cell.ID], (self.points[cell.ID][1], self.points[cell.ID][0] + 0.15), color='blue', zorder=3, fontsize=8)
             #plt.text(cell.origin[1], cell.origin[0], f'{cell.ID}')
             
             for connected_cell in cell.connections.values():
-                conncell = (connected_cell.origin[0], connected_cell.origin[1])
-                plt.plot([cell.origin[1], conncell[1]], [cell.origin[0], conncell[0]], 'ko-', zorder=0)
+                #conncell = (connected_cell.origin[0], connected_cell.origin[1])
+                #plt.plot([cell.origin[1], conncell[1]], [cell.origin[0], conncell[0]], 'ko-', zorder=0)
 
-    def generateGrid(self, center_lat, center_lon, max_length):
+                conncell = (self.points[connected_cell.ID][0], self.points[connected_cell.ID][1])
+                plt.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]], 'ko-', zorder=0)
+
+    def printLatLon(self):
+        print("latitude, longitude")
+        for cell in self.cells:
+            print(str(cell.origin[0]) + ", " + str(cell.origin[1]))
+
+    def generateGrid(self, center_lat, center_lon, max_length, exclude_list):
         """
         Generate a grid of latitude and longitude points within a specified maximum length.
         """
@@ -99,7 +107,14 @@ class PlaceNetwork:
         self.mapsizelat = len(latitudes)
         self.mapsizelon = len(longitudes)
 
-        grid = [(lat, lon) for lat in latitudes for lon in longitudes]
+        grid = []
+        for i in range(len(latitudes)):
+            for j in range(len(longitudes)):
+                if (i, j) not in exclude_list:
+                    grid.append((latitudes[i], longitudes[j]))
+                else:
+                    print("Excluding: ", (i, j))
+        #grid = [(lat, lon) for lat in latitudes for lon in longitudes]
         return grid
     
     def rotateAboutCenter(self, points, center, rotation_degrees):
@@ -146,16 +161,29 @@ class PlaceNetwork:
         """
         self.numcosts = numcosts
         center = [33.646362, -117.843127]
-        grid = self.generateGrid(center[0], center[1], 40)
+
+        exclude = [(10, 14), (11, 14), (12, 14), (13, 14), (14, 14), (15, 14), (16, 14),
+                   (10, 15), (11, 15), (12, 15), (13, 15), (14, 15), (15, 15), (16, 15),
+                   (10, 16), (11, 16), (12, 16), (13, 16), (14, 16), (15, 16), (16, 16),
+                   (0, 4), (1, 4), (2, 4), (3, 4), (4, 4),
+                   (0, 5), (1, 5), (2, 5), (3, 5), (4, 5),
+                   (0, 6), (1, 6), (2, 6), (3, 6), (4, 6),
+                   (0, 7), (1, 7), (2, 7), (3, 7), (4, 7),
+                   (0, 8), (1, 8), (2, 8), (3, 8), (4, 8)]
+        #Reverse because I messed up
+        exclude = [(pt[1], pt[0]) for pt in exclude]
+
+        grid = self.generateGrid(center[0], center[1], 40, exclude)
         grid = self.rotateAboutCenter(grid, center, 20)
         self.addFromGrid(grid)
 
         id = 0
         for i in range(self.mapsizelat):
             for j in range(self.mapsizelon):
-                self.points[(i, j)] = id
-                self.points[id] = (i, j)
-                id += 1
+                if (i, j) not in exclude:
+                    self.points[(i, j)] = id
+                    self.points[id] = (i, j)
+                    id += 1
 
     def initConnections(self):
         """
@@ -327,5 +355,12 @@ class PlaceNetwork:
                 self.cells[cons].connections[cell.ID] = cell
 
 
+if __name__ == "__main__":
+    test_network = PlaceNetwork()
+    test_network.initAldritch()
+    test_network.initConnections()
 
-    
+    test_network.plotCells()
+    plt.show()
+
+    test_network.printLatLon()
