@@ -111,8 +111,7 @@ class JackalController:
         self.wifitotal += self.wifistrength
 
     def rosbag(self, record=True):
-        # Records rosbag for offline analysis. 
-        
+        # Records rosbag for offline analysis.
         # start recording
         if record:
             self.bag_file = f'{int(time.time())}' + '.bag'
@@ -610,8 +609,8 @@ class JackalController:
 
         if self.gps:
             print("Waiting for GPS data...")
-            while(self.gpsdata is None):
-                time.sleep(1)
+            #while(self.gpsdata is None):
+            #    time.sleep(1)
             print("DONE")
 
     def unregisterAll(self):
@@ -719,58 +718,56 @@ if __name__ == "__main__":
 
         t = 0
         trials = args.trials
-        while t < trials:
-            lf = levy_flight(2, 3)  # levy_flight will return a new waypoint
-            # waypoint coordinates must be whole numbers
-            new_wp = (wp_start[0] + round(lf[0]), wp_start[1] + round(lf[1]))
-            while new_wp not in network.points:
-                lf = levy_flight(2, 3)
+
+        try:
+            while t < trials:
+                lf = levy_flight(2, 3)  # levy_flight will return a new waypoint
+                # waypoint coordinates must be whole numbers
                 new_wp = (wp_start[0] + round(lf[0]), wp_start[1] + round(lf[1]))
-            wp_end = np.copy(new_wp)
-            # check that the waypoint is within the map boundaries
+                while new_wp not in network.points:
+                    lf = levy_flight(2, 3)
+                    new_wp = (wp_start[0] + round(lf[0]), wp_start[1] + round(lf[1]))
+                wp_end = np.copy(new_wp)
+                # check that the waypoint is within the map boundaries
 
-            #$if wp_end[0] < 0:
-            #   wp_end[0] = 0
-            #elif wp_end[0] >= n1:
-            #    wp_end[0] = n1-1
+                #$if wp_end[0] < 0:
+                #   wp_end[0] = 0
+                #elif wp_end[0] >= n1:
+                #    wp_end[0] = n1-1
 
-            #wp_end[1] += round(lf[1])
-            #if wp_end[1] < 0:
-            #    wp_end[1] = 0
-            #elif wp_end[1] >= n1:
-            #    wp_end[1] = n1-1
+                #wp_end[1] += round(lf[1])
+                #if wp_end[1] < 0:
+                #    wp_end[1] = 0
+                #elif wp_end[1] >= n1:
+                #    wp_end[1] = n1-1
 
-            print("Path %d from %d,%d to %d,%d" % (t+1, wp_start[0], wp_start[1], wp_end[0], wp_end[1]))
+                print("Path %d from %d,%d to %d,%d" % (t+1, wp_start[0], wp_start[1], wp_end[0], wp_end[1]))
 
-            # if the new waypoint is not over 1 grid position away from the current position,
-            #     skip this waypoint and find another.
-            if get_distance(wp_start, wp_end) > 1:
-                t += 1
-                p = network.spikeWave(wp_start, wp_end, costmap=0)
+                # if the new waypoint is not over 1 grid position away from the current position,
+                #     skip this waypoint and find another.
+                if get_distance(wp_start, wp_end) > 1:
+                    t += 1
+                    p = network.spikeWave(wp_start, wp_end, costmap=0)
 
 
-                wpts = [network.cells[i].origin for i in p]
-                pts = [network.points[i] for i in p]
-                print("Path: ")
-                print(pts[::-1])
+                    wpts = [network.cells[i].origin for i in p]
+                    pts = [network.points[i] for i in p]
+                    print("Path: ")
+                    print(pts[::-1])
 
-                costs, reached = jackal.drivePath(wpts[::-1], network, pts[::-1])
-                p = p[len(p) - 1 - reached:-1]
-                # set wp_end to the end of the path just in case path was not reached.
-                wp_end = np.array([pts[0][0], pts[0][1]])
-                wp_start = np.copy(wp_end)
+                    costs, reached = jackal.drivePath(wpts[::-1], network, pts[::-1])
+                    p = p[len(p) - 1 - reached:-1]
+                    # set wp_end to the end of the path just in case path was not reached.
+                    wp_end = np.array([pts[0][0], pts[0][1]])
+                    wp_start = np.copy(wp_end)
 
-                #UPDATE
-                network.eProp(costs, p)
-                saveNetwork(network, "test_" + str(t))
+                    #UPDATE
+                    network.eProp(costs, p)
+                    saveNetwork(network, "test_" + str(t))
+        except:
+            jackal.rosbag(False) # stop recording
             
         
-
-    #for point in path[::-1]:
-    #    print("Moving to waypoint: " + str(network.cells[point].origin[0]) + ", "  + str(network.cells[point].origin[1]))
-    #    jackal.driveToWaypoint(network.cells[point].origin[0], network.cells[point].origin[1])
-    #    jackal.turnToWaypoint(jackal.latitude, jackal.longitude, network.cells[point].origin[0], network.cells[point].origin[1])
-    
 
     try:
         input("Press ENTER to terminate script")
