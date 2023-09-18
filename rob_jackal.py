@@ -82,6 +82,10 @@ class JackalController:
         self.wificounter = 0
         self.wifitotal = 0
 
+        #COST: SLOPE
+        self.slopecost = 0
+        self.slopecounter = 0
+
         if lidar:
             self.createLidarListener(lidartopic)
             self.lidartopic = lidartopic
@@ -180,6 +184,10 @@ class JackalController:
         #COST: WIFIACC
         self.wifitotal = 0
         self.wificounter = 0
+
+        #COST: SLOPE
+        self.slopecost = 0
+        self.slopecounter = 0
         
 
     def computeCost(self):
