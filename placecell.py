@@ -112,8 +112,6 @@ class PlaceNetwork:
             for j in range(len(longitudes)):
                 if (i, j) not in exclude_list:
                     grid.append((latitudes[i], longitudes[j]))
-                else:
-                    print("Excluding: ", (i, j))
         #grid = [(lat, lon) for lat in latitudes for lon in longitudes]
         return grid
     

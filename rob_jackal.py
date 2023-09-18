@@ -4,8 +4,9 @@ import time
 import math
 import rospy
 import pickle
-import numpy as np
 import argparse
+import subprocess
+import numpy as np
 from std_msgs.msg import Float32, Int32
 from nav_msgs.msg import Odometry
 from placecell import PlaceNetwork
@@ -65,6 +66,7 @@ class JackalController:
         #Obstacle Avoidance
         self.blocked = False
         self.blockdir = 0
+        self.first = False
 
         #COST: CURRENT
         self.numcurrent = 0
@@ -119,12 +121,13 @@ class JackalController:
         # start recording
         if record:
             self.bag_file = f'{int(time.time())}' + '.bag'
-            bash_cmd = f'rosbag record -O {self.bag_file} {self.lidartopic} {self.statustopic} {self.headingtopic} /image_proc_resize/image '
-            bash_cmd += f'{self.gpstopic} {self.odomtopic} {self.gps_acc_topic} /wifi_strength &' # background
-            os.system(bash_cmd)
+            bash_cmd =  f'rosbag record -O {self.bag_file} {self.lidartopic} {self.statustopic} '
+            bash_cmd += f' {self.headingtopic} {self.gpstopic} {self.odomtopic} {self.gps_acc_topic} '
+            bash_cmd += f' /image_proc_resize/image /wifi_strength /gx5/imu/data &' # background
+            subprocess.Popen(bash_cmd, shell=True, executable='/bin/bash')
         else:
             # try stopping any already running rosbag recordings
-            bash_cmd = f'kill $(pgrep -f "rosbag record -O {self.bag_file}")'
+            bash_cmd = f'kill $(pgrep -f "rosbag record -O ")'
             os.system(bash_cmd)
 
     def createSimpleDriver(self):
@@ -192,17 +195,17 @@ class JackalController:
 
     def computeCost(self):
         if self.numcurrent != 0:
-            currentcost = self.totalcurrent / self.numcurrent
+            currentcost = max(1, self.totalcurrent / self.numcurrent)
         else: currentcost = 0
         if self.obstotal != 0:
-            obs = self.obspenalty / self.obstotal
-        else: obs = 0
+            obs = 1 + 9*(self.obspenalty / self.obstotal)
+        else: obs = 1
         if self.numgpsacc != 0:
-            gpsacc = self.totalgpsacc / self.numgpsacc
-        else: gpsacc = 0
+            gpsacc = max(1, self.totalgpsacc / self.numgpsacc)
+        else: gpsacc = 1
         if self.wificounter != 0:
-            wifiacc = self.wifitotal / self.wificounter
-        else: wifiacc = 0
+            wifiacc = max(1, self.wifitotal / self.wificounter)
+        else: wifiacc = 1
 
         #TODO: Add other costs and normalizing stuff
 
@@ -276,8 +279,9 @@ class JackalController:
             print("Driving to waypoint (%d, %d)" % (points[i][0], points[i][1]))
             self.turnToWaypoint(self.latitude, self.longitude, latitude, longitude)
 
-            if i == 0:
+            if self.first:
                 cost, completed = self.driveToWaypoint(latitude, longitude, False)
+                self.first = True
             else:
                 cost, completed = self.driveToWaypoint(latitude, longitude, True)
 
@@ -639,9 +643,9 @@ if __name__ == "__main__":
     os.system("python3 wifi_ros.py &") # wifi pub
     os.system("kill -9 $(pgrep -f 'python3 grab_gps')")
     os.system("python3 grab_gps.py >/dev/null 2>&1 &") # phone gps pub
-    os.system("kill -9 $(pgrep -f 'standalone image_proc/resize image:=/camera/image')")
+    os.system("kill -9 $(pgrep -f 'standalone image_proc/resize image:=/camera/image_raw')")
     resize_cmd = "rosrun nodelet nodelet standalone image_proc/resize \
-                  image:=/camera/image camera_info:=/camera/camera_info \
+                  image:=/camera/image_raw camera_info:=/camera/camera_info \
                   _scale_width:=0.5 _scale_height:=0.5 &"
     os.system(resize_cmd) # resize camera img 
 
@@ -658,6 +662,9 @@ if __name__ == "__main__":
     # Initialize Jackal Controller and Calibrate
     jackal = JackalController(headingtopic='gx5/mag', gpstopic='fone_gps/fix')
     jackal.awaitReadings()
+    # kill ANY currently running rosbags!
+    if args.rosbag:
+        jackal.rosbag(False)
     if os.path.exists("calib.pkl"):
         with open("calib.pkl", "rb") as f:
             a = pickle.load(f, encoding='bytes')
@@ -671,10 +678,12 @@ if __name__ == "__main__":
 
     # Find place network if exists, otherwise create it
     network = PlaceNetwork()
-    if os.path.exists("wgts.pkl"):
-        data = loadNetwork("test")
+    if os.path.exists("chkpt.pkl"):
+        data = loadNetwork("chkpt")
         network.loadFromFile(data)
     else:
+        print("chkpt not loaded")
+        exit()
         network.initAldritch(numcosts=4)
         network.initConnections()
 
@@ -726,7 +735,7 @@ if __name__ == "__main__":
 
         t = 0
         trials = args.trials
-
+        network.first = True
         try:
             while t < trials:
                 lf = levy_flight(2, 3)  # levy_flight will return a new waypoint
@@ -772,11 +781,12 @@ if __name__ == "__main__":
                     #UPDATE
                     network.eProp(costs, p)
                     saveNetwork(network, "test_" + str(t))
+                saveNetwork(network, "chkpt")
         except:
             jackal.rosbag(False) # stop recording
+            saveNetwork(network, "chkpt")
             
         
-
     try:
         input("Press ENTER to terminate script")
     except KeyboardInterrupt: # hmm, doesn't work
