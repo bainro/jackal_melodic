@@ -216,13 +216,13 @@ class JackalController:
 
 
         ang, dist = self.getAngleDistance((self.latitude, self.longitude), (latitude, longitude))
-        while dist > 0.75:
+        while dist > 0.9:
             self.driveToward(ang)
             #print("Distance to waypoint " + str(dist) + " | Heading " + str(self.heading) + " Angle to bearing: " + str(ang))
             ang, dist = self.getAngleDistance((self.latitude, self.longitude), (latitude, longitude))
 
-            if timeout and time.time() - start_time > 10:
-                print("Could not reach waypoint in 10 seconds")
+            if timeout and time.time() - start_time > 60:
+                print("Could not reach waypoint in 60 seconds")
                 return None, False
 
         return self.computeCost(), True
@@ -238,16 +238,16 @@ class JackalController:
         else:
             if abs(self.heading - angle) < np.pi:
                 if self.heading < angle - padding:
-                    self.Drive(0.5, 0.5)
+                    self.Drive(0.5, 0.75)
                 elif self.heading > angle  + padding:					
-                    self.Drive(0.5, -0.5)
+                    self.Drive(0.5, -0.75)
                 else:
                     self.Drive(0.5, 0)
             else:
                 if self.heading < angle - padding:
-                    self.Drive(0.5, -0.5)
+                    self.Drive(0.5, -0.75)
                 elif self.heading > angle  + padding:					
-                    self.Drive(0.5, 0.5)
+                    self.Drive(0.5, 0.75)
                 else:
                     self.Drive(0.5, 0)
 
@@ -255,7 +255,7 @@ class JackalController:
         self.obstotal += 1
         self.rate.sleep()
 
-    def drivePath(self, path, network):
+    def drivePath(self, path, network, points):
         """
 		Drives Jackal to path, return costs.
 		"""
@@ -266,7 +266,7 @@ class JackalController:
             point = path[i]
             latitude = point[0]
             longitude = point[1]
-            print("Driving to waypoint (%d, %d) at (%f, %f)" % (path[i][0], path[i][1], latitude, longitude))
+            print("Driving to waypoint (%d, %d)" % (points[i][0], points[i][1]))
             self.turnToWaypoint(self.latitude, self.longitude, latitude, longitude)
 
             if i == 0:
@@ -277,8 +277,7 @@ class JackalController:
             #Do not update initial waypoint
             if i != 0:
                 if cost is None and completed is False:
-                    print("Could not reach waypoint")
-                    costs.append([10 for costs in range(network.numcostss)])
+                    costs.append([10 for costs in range(network.numcosts)])
                     print("Returning to previous waypoint")
                     self.turnToWaypoint(self.latitude, self.longitude, path[i-1][0], path[i-1][1])
                     cost, completed = self.driveToWaypoint(path[i-1][0], path[i-1][1], False)
@@ -286,7 +285,6 @@ class JackalController:
 
                 print("Computed cost for this path:")
                 print(cost)
-                print("Updating at %d, %d" % (path[i][0], path[i][1]))
                 costs.append(cost)
 
         return costs, i
@@ -569,8 +567,17 @@ class JackalController:
         """
         ang, dist = self.getAngleDistance((startlat, startlong),(endlat, endlong))
 
-        while abs(self.heading - ang) > 0.05:
-            self.Drive(0, 0.50)
+        while abs(self.heading - ang) > 0.1:
+            if abs(self.heading - ang) < np.pi:
+                if self.heading < ang:
+                    self.Drive(0.0, 0.5)
+                elif self.heading > ang:					
+                    self.Drive(0.0, -0.5)
+            else:
+                if self.heading < ang:
+                    self.Drive(0.0, -0.5)
+                elif self.heading > ang:					
+                    self.Drive(0.0, 0.5)
             self.rate.sleep()
             #print("HEADING " + str(self.heading) + " | BEARING " + str(ang))
 
@@ -621,10 +628,10 @@ class JackalController:
 if __name__ == "__main__":
 
     # kill any previously running instances
-    os.system("kill -9 $(pgrep -f 'python wifi_ros.py')")
-    os.system("python wifi_ros.py &") # wifi pub
-    os.system("kill -9 $(pgrep -f 'python grab_gps')")
-    os.system("python grab_gps.py &") # phone gps pub
+    os.system("kill -9 $(pgrep -f 'python3 wifi_ros.py')")
+    os.system("python3 wifi_ros.py &") # wifi pub
+    os.system("kill -9 $(pgrep -f 'python3 grab_gps')")
+    os.system("python3 grab_gps.py >/dev/null 2>&1 &") # phone gps pub
     os.system("kill -9 $(pgrep -f 'standalone image_proc/resize image:=/camera/image')")
     resize_cmd = "rosrun nodelet nodelet standalone image_proc/resize \
                   image:=/camera/image camera_info:=/camera/camera_info \
@@ -690,11 +697,17 @@ if __name__ == "__main__":
         pts = [network.points[i] for i in p]
         print("Path: ")
         print(pts[::-1])
-        costs = jackal.drivePath(wpts[::-1], network)
+        costs, reached = jackal.drivePath(wpts[::-1], network, pts[::-1])
+        p = p[len(p) - 1 - reached:-1]
+        # set wp_end to the end of the path just in case path was not reached.
+
+        #UPDATE
 
         print("Costs for this path: ")
         print(costs)
 
+        network.eProp(costs, p)
+        saveNetwork(network, "test")
         #path = network.spikeWave(network.points[(0, 0)], network.points[(5, 5)])
     elif args.type == 'spikewave':
 
@@ -741,14 +754,15 @@ if __name__ == "__main__":
                 print("Path: ")
                 print(pts[::-1])
 
-                costs, reached = jackal.drivePath(wpts[::-1], network)
+                costs, reached = jackal.drivePath(wpts[::-1], network, pts[::-1])
                 p = p[len(p) - 1 - reached:-1]
                 # set wp_end to the end of the path just in case path was not reached.
-                wp_end = np.array([p[0][0], p[0][1]])
+                wp_end = np.array([pts[0][0], pts[0][1]])
                 wp_start = np.copy(wp_end)
 
                 #UPDATE
                 network.eProp(costs, p)
+                saveNetwork(network, "test_" + str(t))
             
         
 
