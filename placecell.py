@@ -78,7 +78,7 @@ class PlaceNetwork:
             plt.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', color='red', zorder=2)
             #Annotate cell with ID
             #plt.annotate(cell.ID, (cell.origin[1], cell.origin[0]), color='blue', zorder=3, fontsize=8)
-            plt.annotate(self.points[cell.ID], (self.points[cell.ID][1], self.points[cell.ID][0] + 0.15), color='blue', zorder=3, fontsize=8)
+            plt.annotate((self.points[cell.ID][0], self.points[cell.ID][1]), (self.points[cell.ID][1], self.points[cell.ID][0] + 0.15), color='blue', zorder=3, fontsize=8)
             #plt.text(cell.origin[1], cell.origin[0], f'{cell.ID}')
             
             for connected_cell in cell.connections.values():
