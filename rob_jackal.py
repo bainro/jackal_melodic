@@ -123,7 +123,7 @@ class JackalController:
             self.bag_file = f'{int(time.time())}' + '.bag'
             bash_cmd =  f'rosbag record -O {self.bag_file} {self.lidartopic} {self.statustopic} '
             bash_cmd += f' {self.headingtopic} {self.gpstopic} {self.odomtopic} {self.gps_acc_topic} '
-            bash_cmd += f' /image_proc_resize/image /wifi_strength /gx5/imu/data &' # background
+            bash_cmd += f' /throttled_img /wifi_strength /gx5/imu/data &' # background
             subprocess.Popen(bash_cmd, shell=True, executable='/bin/bash')
         else:
             # try stopping any already running rosbag recordings
@@ -643,12 +643,13 @@ if __name__ == "__main__":
     os.system("python3 wifi_ros.py &") # wifi pub
     os.system("kill -9 $(pgrep -f 'python3 grab_gps')")
     os.system("python3 grab_gps.py >/dev/null 2>&1 &") # phone gps pub
-    os.system("kill -9 $(pgrep -f 'standalone image_proc/resize image:=/camera/image_raw')")
+    os.system("kill -9 $(pgrep -f 'standalone image_proc/resize image:=/camera/image_color')")
     resize_cmd = "rosrun nodelet nodelet standalone image_proc/resize \
-                  image:=/camera/image_raw camera_info:=/camera/camera_info \
+                  image:=/camera/image_color camera_info:=/camera/camera_info \
                   _scale_width:=0.5 _scale_height:=0.5 &"
     os.system(resize_cmd) # resize camera img 
-
+    os.system("pkill -f 'throttle messages /image_proc'")
+    os.system("rosrun topic_tools throttle messages /image_proc_resize/image 5 /throttled_img &")
 
     # Initialize argparser
     parser = argparse.ArgumentParser(
@@ -727,7 +728,7 @@ if __name__ == "__main__":
         #path = network.spikeWave(network.points[(0, 0)], network.points[(5, 5)])
     elif args.type == 'spikewave':
 
-        wp_end = np.array([5, 5])
+        wp_end = np.array([7, 7])
         wp_start = np.copy(wp_end)
 
         n1 = network.mapsizelat
