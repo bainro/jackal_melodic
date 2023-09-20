@@ -78,7 +78,9 @@ class PlaceNetwork:
         return avg / len(cell.wgts.keys())        
 
     def plotCells(self, costmap=0, image=None, title="Cost Map"):
-        fig, ax = plt.subplots(figsize=(12, 12))
+        #fig, ax = plt.subplots(figsize=(12, 12))
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_axes([0.05, 0.05, 0.85, 0.85])
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
 
         #Get colors
@@ -91,11 +93,15 @@ class PlaceNetwork:
         sm = ScalarMappable(cmap=cmap, norm=norm)
         color_vectors = sm.to_rgba(colors, alpha=None)
 
+        ax_colorbar = fig.add_axes([0.925, 0.1, 0.03, 0.65])
+        cbar = plt.colorbar(sm, cax=ax_colorbar)
+
+
         for i, cell in enumerate(self.cells):
             if colors[i] == 1.0: 
-                plt.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=10, color="black", zorder=2)
+                ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=10, color="black", zorder=2)
             else:
-                plt.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=10, color=color_vectors[i], zorder=2)
+                ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=10, color=color_vectors[i], zorder=2)
             #Annotate cell with ID
             #plt.annotate(cell.ID, (cell.origin[1], cell.origin[0]), color='blue', zorder=3, fontsize=8)
             #plt.annotate((self.points[cell.ID][0], self.points[cell.ID][1]), (self.points[cell.ID][1], self.points[cell.ID][0] + 0.15), color='blue', zorder=3, fontsize=8)
@@ -106,7 +112,7 @@ class PlaceNetwork:
                 #plt.plot([cell.origin[1], conncell[1]], [cell.origin[0], conncell[0]], 'ko-', zorder=0)
 
                 conncell = (self.points[connected_cell.ID][0], self.points[connected_cell.ID][1])
-                plt.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]],'ko-', zorder=1, linewidth=0.5)
+                ax.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]],'ko-', zorder=1, linewidth=0.5)
 
         ax.set_title(title, fontsize=20)
 
@@ -121,6 +127,7 @@ class PlaceNetwork:
             
             # Set the extent to fit the square plot while maintaining aspect ratio
             ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0)
+
 
     def printLatLon(self):
         print("latitude, longitude")
@@ -391,9 +398,26 @@ if __name__ == "__main__":
     network = PlaceNetwork()
     data = loadNetwork("chkpt")
     network.loadFromFile(data)
+
+    network.plotCells(costmap=0, image="images/map/mapraw.jpg", title="Current Cost Map")
+    plt.savefig("images/current_cost_map.png")
+    plt.show()
+    plt.close()
+
+    network.plotCells(costmap=1, image="images/map/mapraw.jpg", title="Obstacle Cost Map")
+    plt.savefig("images/obstacle_cost_map.png")
+    plt.show()
+    plt.close()
+
+    network.plotCells(costmap=2, image="images/map/mapraw.jpg", title="GPS Cost Map")
+    plt.savefig("images/gps_cost_map.png")
+    plt.show()
+    plt.close()
+
     network.plotCells(costmap=3, image="images/map/mapraw.jpg", title="WIFI Cost Map")
     plt.savefig("images/wifi_cost_map.png")
     plt.show()
+    plt.close()
     
 
     #network.printLatLon()
