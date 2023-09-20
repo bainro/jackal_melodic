@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from utils import haversineDistance
+import matplotlib.image as mpimg
+from matplotlib.colors import Normalize
+from matplotlib.cm import ScalarMappable
+from utils import haversineDistance, saveNetwork, loadNetwork
 
 class PlaceCell:
     """
@@ -67,18 +70,35 @@ class PlaceNetwork:
         Adds cell to network
         """
         self.cells.append(cell)
-        
-    def plotCells(self):
-        plt.figure(figsize=(12,12))
-        plt.tick_params(left = False, right = False, labelleft = False, labelbottom = False, bottom = False)
-        ax = plt.gca()
-        ax.set_aspect('equal', adjustable='box')
-        
+
+    def getAvgWgt(self, cell, costmap):
+        avg = 0
+        for connected in cell.wgts.keys():
+            avg += self.cells[connected].wgts[cell.ID][costmap]
+        return avg / len(cell.wgts.keys())        
+
+    def plotCells(self, costmap=0, image=None, title="Cost Map"):
+        fig, ax = plt.subplots(figsize=(12, 12))
+        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+
+        #Get colors
+        colors = []
         for cell in self.cells:
-            plt.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', color='red', zorder=2)
+            colors.append(self.getAvgWgt(cell, costmap))
+        colors = np.array(colors)
+        cmap = plt.get_cmap('viridis')
+        norm = Normalize(vmin=colors.min(), vmax=colors.max())
+        sm = ScalarMappable(cmap=cmap, norm=norm)
+        color_vectors = sm.to_rgba(colors, alpha=None)
+
+        for i, cell in enumerate(self.cells):
+            if colors[i] == 1.0: 
+                plt.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=10, color="black", zorder=2)
+            else:
+                plt.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=10, color=color_vectors[i], zorder=2)
             #Annotate cell with ID
             #plt.annotate(cell.ID, (cell.origin[1], cell.origin[0]), color='blue', zorder=3, fontsize=8)
-            plt.annotate((self.points[cell.ID][0], self.points[cell.ID][1]), (self.points[cell.ID][1], self.points[cell.ID][0] + 0.15), color='blue', zorder=3, fontsize=8)
+            #plt.annotate((self.points[cell.ID][0], self.points[cell.ID][1]), (self.points[cell.ID][1], self.points[cell.ID][0] + 0.15), color='blue', zorder=3, fontsize=8)
             #plt.text(cell.origin[1], cell.origin[0], f'{cell.ID}')
             
             for connected_cell in cell.connections.values():
@@ -86,7 +106,21 @@ class PlaceNetwork:
                 #plt.plot([cell.origin[1], conncell[1]], [cell.origin[0], conncell[0]], 'ko-', zorder=0)
 
                 conncell = (self.points[connected_cell.ID][0], self.points[connected_cell.ID][1])
-                plt.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]], 'ko-', zorder=0)
+                plt.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]],'ko-', zorder=1, linewidth=0.5)
+
+        ax.set_title(title, fontsize=20)
+
+        if image is not None:
+            background_image = mpimg.imread(image)
+            square_x = 300   # Starting x-coordinate of the square
+            square_y = 0   # Starting y-coordinate of the square
+            square_size = 1400   # Size of the square (adjust as needed)
+
+            # Extract the square portion from the rectangular image
+            square_image = background_image[square_y:square_y+square_size, square_x:square_x+square_size]
+            
+            # Set the extent to fit the square plot while maintaining aspect ratio
+            ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0)
 
     def printLatLon(self):
         print("latitude, longitude")
@@ -354,11 +388,12 @@ class PlaceNetwork:
 
 
 if __name__ == "__main__":
-    test_network = PlaceNetwork()
-    test_network.initAldritch()
-    test_network.initConnections()
-
-    test_network.plotCells()
+    network = PlaceNetwork()
+    data = loadNetwork("chkpt")
+    network.loadFromFile(data)
+    network.plotCells(costmap=3, image="images/map/mapraw.jpg", title="WIFI Cost Map")
+    plt.savefig("images/wifi_cost_map.png")
     plt.show()
+    
 
-    test_network.printLatLon()
+    #network.printLatLon()
