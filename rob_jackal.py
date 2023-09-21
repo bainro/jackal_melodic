@@ -803,10 +803,11 @@ if __name__ == "__main__":
                     if len(p) != reached:
                         print("Full path not reached")
                         wp_end = np.array((7, 7))
-                        p = p[len(p) - 1 - reached:-1]
-                        pts = pts[len(pts) - 1 - reached:-1]
+                        p = p[len(p) - 1 - reached:]
+                        pts = pts[len(pts) - 1 - reached:]
                         print("Reached up to")
                         print(pts)
+                        print(len(costs))
                     else:
                         wp_end = np.array([pts[0][0], pts[0][1]])
                     # set wp_end to the end of the path just in case path was not reached.
