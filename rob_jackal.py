@@ -130,13 +130,13 @@ class JackalController:
         roll, pitch, _yaw = tf.transformations.euler_from_quaternion([x, y, z, w])	
         # roll is +/-3.14 on flat gnd; pitch is +/- 0
         if roll > 0:
-	    roll -= 3.14
-	else:
+            roll -= 3.14
+        else:
             roll += 3.14
-        current_slope_cost = abs(roll) + abs(pitch)
-        # print(f'current_slope_cost: {current_slope_cost}')
-        self.slopecost += current_slope_cost
-        self.slopecounter += 1
+            current_slope_cost = abs(roll) + abs(pitch)
+            # print(f'current_slope_cost: {current_slope_cost}')
+            self.slopecost += current_slope_cost
+            self.slopecounter += 1
 
     def rosbag(self, record=True):
         # Records rosbag for offline analysis.
@@ -228,9 +228,9 @@ class JackalController:
         if self.wificounter != 0:
             wifiacc = max(1, self.wifitotal / self.wificounter)
         else: wifiacc = 1
-	if self.slopecounter != 0:
-	    slopecost = max(1, self.slopecost / self.slopecounter)
-	else: slopecost = 1
+        if self.slopecounter != 0:
+            slopecost = max(1, 20*(self.slopecost / self.slopecounter))
+        else: slopecost = 1
 
         #TODO: Add other costs and normalizing stuff
 
@@ -315,8 +315,8 @@ class JackalController:
                 if cost is None and completed is False:
                     costs.append([10 for costs in range(network.numcosts)])
                     print("Returning to previous waypoint")
-                    self.turnToWaypoint(self.latitude, self.longitude, path[i-1][0], path[i-1][1])
-                    cost, completed = self.driveToWaypoint(path[i-1][0], path[i-1][1], False)
+                    self.turnToWaypoint(self.latitude, self.longitude, network.cells[network.points[(7, 7)]].origin[0], network.cells[network.points[(7, 7)]].origin[1])
+                    _, _ = self.driveToWaypoint(network.cells[network.points[(7, 7)]].origin[0], network.cells[network.points[(7, 7)]].origin[1], False)
                     break
 
                 print("Computed cost for this path:")
@@ -799,9 +799,18 @@ if __name__ == "__main__":
                     print(pts[::-1])
 
                     costs, reached = jackal.drivePath(wpts[::-1], network, pts[::-1])
-                    p = p[len(p) - 1 - reached:-1]
+
+                    if len(p) != reached:
+                        print("Full path not reached")
+                        wp_end = np.array((7, 7))
+                        p = p[len(p) - 1 - reached:-1]
+                        pts = pts[len(pts) - 1 - reached:-1]
+                        print("Reached up to")
+                        print(pts)
+                    else:
+                        wp_end = np.array([pts[0][0], pts[0][1]])
                     # set wp_end to the end of the path just in case path was not reached.
-                    wp_end = np.array([pts[0][0], pts[0][1]])
+                    
                     wp_start = np.copy(wp_end)
 
                     #UPDATE
