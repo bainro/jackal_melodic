@@ -685,7 +685,7 @@ if __name__ == "__main__":
     else:
         print("chkpt not loaded")
         exit()
-        network.initAldritch(numcosts=4)
+        network.initAldritch(numcosts=5)
         network.initConnections()
 
 
