@@ -116,6 +116,22 @@ class JackalController:
         self.wificounter += 1
         self.wifitotal += self.wifistrength
 
+    def slopeCallback(self, m):
+        x = m.orientation.x
+        y = m.orientation.y
+        z = m.orientation.z
+        w = m.orientation.w
+        roll, pitch, _yaw = tf.transformations.euler_from_quaternion([x, y, z, w])	
+        # roll is +/-3.14 on flat gnd; pitch is +/- 0
+        if roll > 0:
+	    roll -= 3.14
+	else:
+            roll += 3.14
+        current_slope_cost = abs(roll) + abs(pitch)
+        # print(f'current_slope_cost: {current_slope_cost}')
+        self.slopecost += current_slope_cost
+        self.slopecounter += 1
+
     def rosbag(self, record=True):
         # Records rosbag for offline analysis.
         # start recording
@@ -206,10 +222,13 @@ class JackalController:
         if self.wificounter != 0:
             wifiacc = max(1, self.wifitotal / self.wificounter)
         else: wifiacc = 1
+	if self.slopecounter != 0:
+	    slopecost = max(1, self.slopecost / self.slopecounter)
+	else: slopecost = 1
 
         #TODO: Add other costs and normalizing stuff
 
-        return [currentcost, obs, gpsacc, wifiacc]
+        return [currentcost, obs, gpsacc, wifiacc, slopecost]
 
     def driveToWaypoint(self, latitude, longitude, timeout=False):
         """
