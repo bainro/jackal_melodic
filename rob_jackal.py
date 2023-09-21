@@ -28,7 +28,7 @@ class JackalController:
                  status = True,
                  statustopic = 'feedback',
                  heading = True,
-                 headingtopic = '/imu/data',
+                 headingtopic = '/gx5/imu/data',
                  gps = True,
                  gpstopic = '/fone_gps/fix',
                  odom = True,
@@ -108,6 +108,9 @@ class JackalController:
             self.createWifiListener(wifi_acc_topic)
             self.wifitopic = wifi_acc_topic
 
+        # @TODO add "if slope" logic
+        self.createSlopeListener('/gx5/imu/data')
+
     def createWifiListener(self, topic):
         self.wifinode = rospy.Subscriber(topic, Int32, self.wifiCallback)
 
@@ -116,6 +119,9 @@ class JackalController:
         self.wificounter += 1
         self.wifitotal += self.wifistrength
 
+    def createSlopeListener(self, topic):
+        self.slopenode = rospy.Subscriber(topic, Imu, self.slopeCallback)
+	
     def slopeCallback(self, m):
         x = m.orientation.x
         y = m.orientation.y
