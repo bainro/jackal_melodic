@@ -353,9 +353,7 @@ class PlaceNetwork:
         costs: list of costs for each step in path
         path: list of cells in the path
         """
-        lr = 0.1
-
-        print(self.numcosts)
+        lr = 0.5
 
         #Check there is a valid cost for each costmap at each path
         for cost in costs:
@@ -368,9 +366,10 @@ class PlaceNetwork:
         #print(path)
         for i in range(len(path) - 1):
             for j in range(self.numcosts):
-                loss = costs[i][j] - self.cells[path[i]].wgts[path[i + 1]][j]
-                #print(f"Loss {path[i]} to {path[i + 1]}: ", loss)
-                self.cells[path[i]].wgts[path[i+1]][j] += lr * loss * self.cells[path[i]].et
+                if costs[i][j] != -1:
+                    loss = costs[i][j] - self.cells[path[i]].wgts[path[i + 1]][j]
+                    #print(f"Loss {path[i]} to {path[i + 1]}: ", loss)
+                    self.cells[path[i]].wgts[path[i+1]][j] += lr * loss * self.cells[path[i]].et
 
     def loadFromFile(self, file):
 

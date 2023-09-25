@@ -88,6 +88,16 @@ class JackalController:
         self.slopecost = 0
         self.slopecounter = 0
 
+        #NORMALIZING CONSTANTS. Max is two standard deviations from average
+        self.CURRMIN = 0.6
+        self.CURRMAX = 1.5
+        self.GPSMIN = 3.79
+        self.GPSMAX = 4.1
+        self.WIFIMIN = 40
+        self.WIFIMAX = 65
+        self.SLOPEMIN = 0.0
+        self.SLOPEMAX = 0.5
+
         if lidar:
             self.createLidarListener(lidartopic)
             self.lidartopic = lidartopic
@@ -215,26 +225,36 @@ class JackalController:
         self.slopecounter = 0
         
 
+    def normalizeCost(self, val, minval,  maxval):
+        if val < minval:
+            return 1
+        elif val > maxval:
+            return 10
+        else:
+            return 1 + 9 * ((val - minval) / (maxval - minval))
+
     def computeCost(self):
         if self.numcurrent != 0:
-            currentcost = max(1, self.totalcurrent / self.numcurrent)
-        else: currentcost = 0
+            currentcost = self.normalizeCost(self.totalcurrent / self.numcurrent, self.CURRMIN, self.CURRMAX)
+        else: currentcost = -1
         if self.obstotal != 0:
-            obs = 1 + 9*(self.obspenalty / self.obstotal)
-        else: obs = 1
+            obs = self.normalizeCost(self.obspenalty / self.obstotal, 0, 1)
+        else: obs = -1
         if self.numgpsacc != 0:
-            gpsacc = max(1, self.totalgpsacc / self.numgpsacc)
-        else: gpsacc = 1
+            gpsacc = self.normalizeCost(self.totalgpsacc / self.numgpsacc, self.GPSMIN, self.GPSMAX)
+        else: gpsacc = -1
         if self.wificounter != 0:
-            wifiacc = max(1, self.wifitotal / self.wificounter)
-        else: wifiacc = 1
+            wifiacc = self.normalizeCost(self.wifitotal / self.wificounter, self.WIFIMIN, self.WIFIMAX)
+        else: wifiacc = -1
         if self.slopecounter != 0:
-            slopecost = max(1, 20*(self.slopecost / self.slopecounter))
-        else: slopecost = 1
+            slopecost = self.normalizeCost(self.slopecost / self.slopecounter, self.SLOPEMIN, self.SLOPEMAX) #max(1, 20*(self.slopecost / self.slopecounter))
+        else: slopecost = -1
 
         #TODO: Add other costs and normalizing stuff
 
-        return [currentcost, obs, gpsacc, wifiacc, slopecost]
+
+        #Last is obstacle map. That will only be updated when obstacle is encountered and never here
+        return [currentcost, obs, gpsacc, wifiacc, slopecost, -1]
 
     def driveToWaypoint(self, latitude, longitude, timeout=False):
         """
@@ -258,7 +278,7 @@ class JackalController:
 
             if timeout and time.time() - start_time > 60:
                 print("Could not reach waypoint in 60 seconds")
-                return None, False
+                return self.computeCost(), False
 
         return self.computeCost(), True
 
@@ -312,11 +332,15 @@ class JackalController:
 
             #Do not update initial waypoint
             if i != 0:
-                if cost is None and completed is False:
-                    costs.append([10 for costs in range(network.numcosts)])
+                if completed is False:
+                    cost[-1] = 10.0 
                     print("Returning to previous waypoint")
-                    self.turnToWaypoint(self.latitude, self.longitude, network.cells[network.points[(7, 7)]].origin[0], network.cells[network.points[(7, 7)]].origin[1])
-                    _, _ = self.driveToWaypoint(network.cells[network.points[(7, 7)]].origin[0], network.cells[network.points[(7, 7)]].origin[1], False)
+                    #self.turnToWaypoint(self.latitude, self.longitude, network.cells[network.points[(7, 7)]].origin[0], network.cells[network.points[(7, 7)]].origin[1])
+                    #_, _ = self.driveToWaypoint(network.cells[network.points[(7, 7)]].origin[0], network.cells[network.points[(7, 7)]].origin[1], False)
+
+
+                    self.turnToWaypoint(self.latitude, self.longitude, path[i-1][0], path[i-1][1])
+                    _, _ = self.driveToWaypoint(path[i-1][0], path[i-1][1], False)
                     break
 
                 print("Computed cost for this path:")
@@ -680,9 +704,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
                     prog='Jackal Spikewave',
                     description='Spiking Wavefront Propagation with Jackal')
-    parser.add_argument('--type', '-t', type=str, default='single', help='Specifies the test type (spikewave, single, test)')
-    parser.add_argument('--trials', '-n', type=int, default=10, help='Number of trials for spikewave test')
-    parser.add_argument('--rosbag', '-rosbag', type=bool, default=False, help='Record rosbag (T/F)')
+    parser.add_argument('--type', type=str, default='single', help='Specifies the test type (spikewave, single, test, or goals)')
+    parser.add_argument('--trials', type=int, default=10, help='Number of trials for spikewave test')
+    parser.add_argument('--rosbag', type=bool, default=False, help='Record rosbag (T/F)')
+    parser.add_argument('--list', type=str, default='waypoints.txt', help='List of waypoints')
+    parser.add_argument('--start', type=int, default=0, help='Starting waypoint')
     args = parser.parse_args()
 
     # Initialize Jackal Controller and Calibrate
@@ -821,6 +847,65 @@ if __name__ == "__main__":
         except:
             jackal.rosbag(False) # stop recording
             saveNetwork(network, "chkpt")
+
+    elif args.type == 'goals':
+        wp_end = np.array([7, 7])
+        wp_start = np.copy(wp_end)
+
+        n1 = network.mapsizelat
+        n2 = network.mapsizelon
+
+        trials = args.trials
+        network.first = True
+
+        waypoints = []
+
+        if os.path.exists(args.file):
+            with open(args.file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('[') and line.endswith(']'):
+                        parts = line[1:-1].split(',')
+                        waypoint = (int(parts[0]), int(parts[1]))
+                        waypoints.append(waypoint)
+        else:
+            print("File does not exist")
+            exit()
+
+        if args.trials != 0:
+            wp_start = waypoints[args.start - 1]
+
+
+        for i, wps in enumerate(waypoints[args.start:]):
+            wp_end = np.copy(wps)
+            p = network.spikeWave(wp_start, wp_end, costmap=0)
+
+
+            wpts = [network.cells[i].origin for i in p]
+            pts = [network.points[i] for i in p]
+            print("Path: ")
+            print(pts[::-1])
+
+            costs, reached = jackal.drivePath(wpts[::-1], network, pts[::-1])
+
+            if len(p) != reached:
+                print("Full path not reached")
+                wp_end = np.array((7, 7))
+                p = p[len(p) - 1 - reached:]
+                pts = pts[len(pts) - 1 - reached:]
+                print("Reached up to")
+                print(pts)
+            else:
+                wp_start = np.array([pts[0][0], pts[0][1]])
+            # set wp_end to the end of the path just in case path was not reached.
+
+            #UPDATE
+            network.eProp(costs, p)
+            saveNetwork(network, "wp_" + str(i))
+        saveNetwork(network, "chkpt")
+
+        
+
             
         
     try:
