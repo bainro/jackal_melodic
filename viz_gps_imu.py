@@ -26,6 +26,6 @@ if __name__ == "__main__":
       # scary triangle maths
       diff_poses.append((diff_lat ** 2 + diff_lon ** 2) ** 0.5)
     prev_lat = curr_lat
-    prev_lon = curr_long
+    prev_lon = curr_lon
   bag.close()
   plt.hist(diff_poses, bins=10)
