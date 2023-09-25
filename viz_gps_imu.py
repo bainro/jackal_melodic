@@ -34,6 +34,6 @@ if __name__ == "__main__":
     prev_lon = curr_lon
   bag.close()
   print("number of NaNs: ", nan_count)
-  plt.hist(diff_poses, bins=10)
+  plt.hist(diff_poses, bins=100)
   plt.show()
   plt.pause()
