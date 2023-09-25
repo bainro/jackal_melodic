@@ -1,6 +1,7 @@
 '''
 Visualize gps signal variance from a rosbag
 '''
+import math
 import rosbag
 import argparse
 import matplotlib.pyplot as plt
@@ -23,8 +24,12 @@ if __name__ == "__main__":
       diff_lat = abs(curr_lat - prev_lat)
       diff_lon = abs(curr_lon - prev_lon)
       # scary triangle maths
-      diff_poses.append((diff_lat ** 2 + diff_lon ** 2) ** 0.5)
-      print(diff_poses[-1])
+      hypo = (diff_lat ** 2 + diff_lon ** 2) ** 0.5
+      if math.isnan(hype):
+        print("diff_lat: ", diff_lat)
+        print("diff_lon: ", diff_lon)
+      else:
+        diff_poses.append(hypo)
     prev_lat = curr_lat
     prev_lon = curr_lon
   bag.close()
