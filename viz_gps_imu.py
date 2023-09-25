@@ -24,6 +24,7 @@ if __name__ == "__main__":
       diff_lon = abs(curr_lon - prev_lon)
       # scary triangle maths
       diff_poses.append((diff_lat ** 2 + diff_lon ** 2) ** 0.5)
+      print(diff_poses[-1])
     prev_lat = curr_lat
     prev_lon = curr_lon
   bag.close()
