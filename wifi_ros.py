@@ -11,6 +11,7 @@ if __name__ == '__main__':
     wifi_sig = 0
     wifi_ssid = "'UCInet Mobile Access'"
     nmcli_cmd = f'nmcli d wifi | grep {wifi_ssid}' # BASH
+    # could use iwconfig's signal lvl instead?
 
     while not rospy.is_shutdown():
         msg = Int32()
