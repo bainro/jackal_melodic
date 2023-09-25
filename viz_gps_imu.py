@@ -21,8 +21,8 @@ if __name__ == "__main__":
     if prev_lat == None:
       print("only expecting this msg once @ beginning of bag")
     else:
-      diff_lats = abs(curr_lat - prev_lat)
-      diff_lons = abs(curr_lon - prev_lon)
+      diff_lat = abs(curr_lat - prev_lat)
+      diff_lon = abs(curr_lon - prev_lon)
       # scary triangle maths
       diff_poses.append((diff_lat ** 2 + diff_lon ** 2) ** 0.5)
     prev_lat = curr_lat
