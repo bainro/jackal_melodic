@@ -35,3 +35,5 @@ if __name__ == "__main__":
   bag.close()
   print("number of NaNs: ", nan_count)
   plt.hist(diff_poses, bins=10)
+  plt.show()
+  plt.pause()
