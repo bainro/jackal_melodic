@@ -25,7 +25,7 @@ if __name__ == "__main__":
       diff_lon = abs(curr_lon - prev_lon)
       # scary triangle maths
       hypo = (diff_lat ** 2 + diff_lon ** 2) ** 0.5
-      if math.isnan(hype):
+      if math.isnan(hypo):
         print("diff_lat: ", diff_lat)
         print("diff_lon: ", diff_lon)
       else:
