@@ -27,5 +27,4 @@ if __name__ == "__main__":
     prev_lat  = curr_lat
     prev_long = curr_long  
   bag.close()
-
-  
+  plt.hist(diff_poses, bins=10)
