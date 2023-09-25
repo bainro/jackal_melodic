@@ -15,6 +15,7 @@ if __name__ == "__main__":
   diff_poses = []
   bag = rosbag.Bag(args.bag_file)
   for topic, msg, t in bag.read_messages(topics='navsat/fix'):
+    print('hmm')
     curr_lat = msg.latitude
     curr_lon = msg.longitude
     if prev_lat == None:
