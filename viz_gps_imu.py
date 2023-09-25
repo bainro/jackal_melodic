@@ -14,6 +14,7 @@ args = parser.parse_args()
 if __name__ == "__main__":
   prev_lat, prev_lon = None, None
   diff_poses = []
+  nan_count = 0
   bag = rosbag.Bag(args.bag_file)
   for topic, msg, t in bag.read_messages(topics='/navsat/fix'):
     curr_lat = msg.latitude
@@ -26,11 +27,11 @@ if __name__ == "__main__":
       # scary triangle maths
       hypo = (diff_lat ** 2 + diff_lon ** 2) ** 0.5
       if math.isnan(hypo):
-        print("diff_lat: ", diff_lat)
-        print("diff_lon: ", diff_lon)
+        nan_count += 1
       else:
         diff_poses.append(hypo)
     prev_lat = curr_lat
     prev_lon = curr_lon
   bag.close()
+  print("number of NaNs: ", nan_count)
   plt.hist(diff_poses, bins=10)
