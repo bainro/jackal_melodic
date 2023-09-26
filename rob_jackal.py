@@ -670,8 +670,8 @@ class JackalController:
 
         if self.gps:
             print("Waiting for GPS data...")
-            #while(self.gpsdata is None):
-            #    time.sleep(1)
+            while(self.gpsdata is None):
+                time.sleep(1)
             print("DONE")
 
     def unregisterAll(self):
@@ -712,7 +712,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Initialize Jackal Controller and Calibrate
-    jackal = JackalController(headingtopic='gx5/mag', gpstopic='fone_gps/fix')
+    jackal = JackalController(headingtopic='gx5/mag', gpstopic='novatel/fix')
     jackal.awaitReadings()
     # kill ANY currently running rosbags!
     if args.rosbag:
@@ -735,8 +735,7 @@ if __name__ == "__main__":
         network.loadFromFile(data)
     else:
         print("chkpt not loaded")
-        exit()
-        network.initAldritch(numcosts=5)
+        network.initAldritch(numcosts=6)
         network.initConnections()
 
 
@@ -849,8 +848,8 @@ if __name__ == "__main__":
             saveNetwork(network, "chkpt")
 
     elif args.type == 'goals':
-        wp_end = np.array([7, 7])
-        wp_start = np.copy(wp_end)
+        wp_end = np.array([10, 10])
+        wp_start = np.array([10,10])
 
         n1 = network.mapsizelat
         n2 = network.mapsizelon
@@ -860,14 +859,13 @@ if __name__ == "__main__":
 
         waypoints = []
 
-        if os.path.exists(args.file):
-            with open(args.file, 'r') as f:
+        if os.path.exists(args.list):
+            with open(args.list, 'r') as f:
                 for line in f:
                     line = line.strip()
-                    if line.startswith('[') and line.endswith(']'):
-                        parts = line[1:-1].split(',')
-                        waypoint = (int(parts[0]), int(parts[1]))
-                        waypoints.append(waypoint)
+                    parts = line.split(' ')
+                    waypoint = (int(float(parts[0])), int(float(parts[1])))
+                    waypoints.append(waypoint)
         else:
             print("File does not exist")
             exit()
