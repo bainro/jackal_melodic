@@ -886,13 +886,12 @@ if __name__ == "__main__":
 
             costs, reached = jackal.drivePath(wpts[::-1], network, pts[::-1])
 
-            if len(p) != reached:
+            if len(p) != reached - 1:
                 print("Full path not reached")
-                wp_end = np.array((7, 7))
                 p = p[len(p) - 1 - reached:]
                 pts = pts[len(pts) - 1 - reached:]
                 print("Reached up to")
-                print(pts)
+                print(pts[::-1])
             else:
                 wp_start = np.array([pts[0][0], pts[0][1]])
             # set wp_end to the end of the path just in case path was not reached.
