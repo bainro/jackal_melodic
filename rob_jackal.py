@@ -899,6 +899,8 @@ if __name__ == "__main__":
             #UPDATE
             network.eProp(costs, p)
             saveNetwork(network, "wp_" + str(i))
+	    if i % 5:
+               saveNetwork(network, "chkpt")
         saveNetwork(network, "chkpt")
 
         
