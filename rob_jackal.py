@@ -90,7 +90,7 @@ class JackalController:
 
         #NORMALIZING CONSTANTS. Max is two standard deviations from average
         self.CURRMIN = 0.6
-        self.CURRMAX = 1.5
+        self.CURRMAX = 10.0
         self.GPSMIN = 3.79
         self.GPSMAX = 4.1
         self.WIFIMIN = 40
@@ -341,7 +341,7 @@ class JackalController:
 
                     self.turnToWaypoint(self.latitude, self.longitude, path[i-1][0], path[i-1][1])
                     _, _ = self.driveToWaypoint(path[i-1][0], path[i-1][1], False)
-                    break
+                    i = i-1
 
                 print("Computed cost for this path:")
                 print(cost)
@@ -876,7 +876,7 @@ if __name__ == "__main__":
 
         for i, wps in enumerate(waypoints[args.start:]):
             wp_end = np.copy(wps)
-            p = network.spikeWave(wp_start, wp_end, costmap=0)
+            p = network.spikeWave(wp_start, wp_end, costmap=1)
 
 
             wpts = [network.cells[i].origin for i in p]
@@ -886,7 +886,7 @@ if __name__ == "__main__":
 
             costs, reached = jackal.drivePath(wpts[::-1], network, pts[::-1])
 
-            if len(p) != reached - 1:
+            if len(p) != reached + 1:
                 print("Full path not reached")
                 p = p[len(p) - 1 - reached:]
                 pts = pts[len(pts) - 1 - reached:]
@@ -899,8 +899,8 @@ if __name__ == "__main__":
             #UPDATE
             network.eProp(costs, p)
             saveNetwork(network, "wp_" + str(i))
-	    if i % 5:
-               saveNetwork(network, "chkpt")
+            if i % 5:
+                saveNetwork(network, "chkpt")
         saveNetwork(network, "chkpt")
 
         
