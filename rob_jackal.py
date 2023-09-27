@@ -712,7 +712,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Initialize Jackal Controller and Calibrate
-    jackal = JackalController(headingtopic='gx5/mag', gpstopic='novatel/fix')
+    jackal = JackalController(headingtopic='gx5/mag', gpstopic='fone_gps/fix')
     jackal.awaitReadings()
     # kill ANY currently running rosbags!
     if args.rosbag:
