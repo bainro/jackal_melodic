@@ -386,6 +386,7 @@ class PlaceNetwork:
             newcell = PlaceCell(cell[0], cell[1][0], cell[1][1], self.numcosts)
             newcell.wgts = cell[2]
             newcell.delaybuffs = cell[3]
+            newcell.visitation = cell[4]
             self.addCell(newcell)
 
 
