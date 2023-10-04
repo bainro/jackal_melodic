@@ -25,6 +25,8 @@ class PlaceCell:
         self.I = 0
         self.delaybuffs = {}
         self.et = 0.0
+
+        self.visitation = 0
     
         
     def reset(self):
