@@ -30,7 +30,7 @@ def haversineDistance(lat1, lon1, lat2, lon2):
     return distance
 
 def saveNetwork(network, title="network"):
-    cells = [[cell.ID, cell.origin, cell.wgts, cell.delaybuffs] for cell in network.cells]
+    cells = [[cell.ID, cell.origin, cell.wgts, cell.delaybuffs, cell.visitation] for cell in network.cells]
     points = network.points
     numcosts = network.numcosts
     mapsizes = [network.mapsizelat, network.mapsizelon]
