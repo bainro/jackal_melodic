@@ -342,6 +342,9 @@ class JackalController:
                     self.turnToWaypoint(self.latitude, self.longitude, path[i-1][0], path[i-1][1])
                     _, _ = self.driveToWaypoint(path[i-1][0], path[i-1][1], False)
                     i = i-1
+		else:
+		    #Update visitation count for current cell
+		    network.cells[network.points[points[i]]].visitation += 1
 
                 print("Computed cost for this path:")
                 print(cost)
