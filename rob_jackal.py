@@ -143,10 +143,10 @@ class JackalController:
             roll -= 3.14
         else:
             roll += 3.14
-            current_slope_cost = abs(roll) + abs(pitch)
+        current_slope_cost = abs(roll) + abs(pitch)
             # print(f'current_slope_cost: {current_slope_cost}')
-            self.slopecost += current_slope_cost
-            self.slopecounter += 1
+        self.slopecost += current_slope_cost
+        self.slopecounter += 1
 
     def rosbag(self, record=True):
         # Records rosbag for offline analysis.
@@ -276,8 +276,8 @@ class JackalController:
             #print("Distance to waypoint " + str(dist) + " | Heading " + str(self.heading) + " Angle to bearing: " + str(ang))
             ang, dist = self.getAngleDistance((self.latitude, self.longitude), (latitude, longitude))
 
-            if timeout and time.time() - start_time > 60:
-                print("Could not reach waypoint in 60 seconds")
+            if timeout and time.time() - start_time > 45:
+                print("Could not reach waypoint in 45 seconds")
                 return self.computeCost(), False
 
         return self.computeCost(), True
@@ -326,7 +326,7 @@ class JackalController:
 
             if self.first:
                 cost, completed = self.driveToWaypoint(latitude, longitude, False)
-                self.first = True
+                self.first = False
             else:
                 cost, completed = self.driveToWaypoint(latitude, longitude, True)
 
@@ -342,13 +342,15 @@ class JackalController:
                     self.turnToWaypoint(self.latitude, self.longitude, path[i-1][0], path[i-1][1])
                     _, _ = self.driveToWaypoint(path[i-1][0], path[i-1][1], False)
                     i = i-1
-		else:
-		    #Update visitation count for current cell
-		    network.cells[network.points[points[i]]].visitation += 1
+                else:
+                    #Update visitation count for current cell
+                    network.cells[network.points[points[i]]].visitation += 1
 
                 print("Computed cost for this path:")
                 print(cost)
                 costs.append(cost)
+                if completed is False:
+                    return costs, i
 
         return costs, i
 
@@ -715,7 +717,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Initialize Jackal Controller and Calibrate
-    jackal = JackalController(headingtopic='gx5/mag', gpstopic='fone_gps/fix')
+    jackal = JackalController(headingtopic='gx5/mag', gpstopic='novatel/fix')
     jackal.awaitReadings()
     # kill ANY currently running rosbags!
     if args.rosbag:
@@ -879,7 +881,7 @@ if __name__ == "__main__":
 
         for i, wps in enumerate(waypoints[args.start:]):
             wp_end = np.copy(wps)
-            p = network.spikeWave(wp_start, wp_end, costmap=1)
+            p = network.spikeWave(wp_start, wp_end, costmap=0)
 
 
             wpts = [network.cells[i].origin for i in p]
@@ -895,8 +897,7 @@ if __name__ == "__main__":
                 pts = pts[len(pts) - 1 - reached:]
                 print("Reached up to")
                 print(pts[::-1])
-            else:
-                wp_start = np.array([pts[0][0], pts[0][1]])
+            wp_start = np.array([pts[0][0], pts[0][1]])
             # set wp_end to the end of the path just in case path was not reached.
 
             #UPDATE
