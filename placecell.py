@@ -239,7 +239,7 @@ class PlaceNetwork:
                         if haversineDistance(cell.origin[0], cell.origin[1], other_cell.origin[0], other_cell.origin[1]) < 7.75:
                             cell.connect(other_cell)
 
-    def spikeWave(self, startPt, goalPt, costmap=0):
+    def spikeWave(self, startPt, goalPt, costmap=[0]):
         """
         Performs spikewave propogation on graph.
         """
@@ -291,7 +291,7 @@ class PlaceNetwork:
 
                 #Set delay buffers of connections as weights of those connections:
                 for cons in self.cells[fid[i]].delaybuffs.keys():
-                    self.cells[fid[i]].delaybuffs[cons] = round(self.cells[fid[i]].wgts[cons][costmap])
+                    self.cells[fid[i]].delaybuffs[cons] = round(sum([self.cells[fid[i]].wgts[cons][j] for j in costmap]))
                     
                 #Check if neuron is goal locations
                 if self.cells[fid[i]].ID == goalID:

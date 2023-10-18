@@ -877,11 +877,13 @@ if __name__ == "__main__":
 
         if args.trials != 0:
             wp_start = waypoints[args.start - 1]
+            #FiX
+            #wp_start = np.array([8, 15])
 
 
         for i, wps in enumerate(waypoints[args.start:]):
             wp_end = np.copy(wps)
-            p = network.spikeWave(wp_start, wp_end, costmap=0)
+            p = network.spikeWave(wp_start, wp_end, costmap=[0, 5])
 
 
             wpts = [network.cells[i].origin for i in p]
@@ -893,7 +895,7 @@ if __name__ == "__main__":
 
             if len(p) != reached + 1:
                 print("Full path not reached")
-                p = p[len(p) - 1 - reached:]
+                p = p[len(p) - 2 - reached:]
                 pts = pts[len(pts) - 1 - reached:]
                 print("Reached up to")
                 print(pts[::-1])
@@ -902,7 +904,7 @@ if __name__ == "__main__":
 
             #UPDATE
             network.eProp(costs, p)
-            saveNetwork(network, "wp_" + str(i))
+            saveNetwork(network, "wp_" + str(args.start+i))
             if i % 5:
                 saveNetwork(network, "chkpt")
         saveNetwork(network, "chkpt")
