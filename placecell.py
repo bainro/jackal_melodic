@@ -12,7 +12,7 @@ class PlaceCell:
     def __init__(self, ID, x, y, numcosts):
         self.ID = ID
         self.origin = (x, y)
-        self.initwgt = 5.0
+        self.initwgt = 1.0
         self.numcosts = numcosts
         
         #Connections map ID to cell
