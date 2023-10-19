@@ -254,8 +254,9 @@ class PlaceNetwork:
         #Normalize dict values between 1-10
         max_wgt = max(wgt_dict.values())
         min_wgt = min(wgt_dict.values())
-        for key in wgt_dict.keys():
-            wgt_dict[key] = 1 + (wgt_dict[key] - min_wgt) * 9 / (max_wgt - min_wgt)
+        if max_wgt != min_wgt:
+            for key in wgt_dict.keys():
+                wgt_dict[key] = 1 + (wgt_dict[key] - min_wgt) * 9 / (max_wgt - min_wgt)
 
         return wgt_dict
 

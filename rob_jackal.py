@@ -747,10 +747,10 @@ if __name__ == "__main__":
     if args.rosbag:
         jackal.rosbag() # start recording
 
-    elif args.type == 'spikewave':
+    if args.type == 'spikewave':
         
-        wp_end = np.array([10, 10])
-        wp_start = np.array([10,10])
+        wp_end = np.array([3, 4])
+        wp_start = np.array([3 ,4])
 
         n1 = network.mapsizelat
         n2 = network.mapsizelon
