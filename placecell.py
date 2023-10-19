@@ -239,10 +239,32 @@ class PlaceNetwork:
                         if haversineDistance(cell.origin[0], cell.origin[1], other_cell.origin[0], other_cell.origin[1]) < 7.75:
                             cell.connect(other_cell)
 
+
+    def normalizeWeights(self, costmaps):
+        """
+        Returns a dictionary of wgts that are normalized in relation to each costmap provided.
+        """
+
+        #New dict maps cell ID pair to weights
+        wgt_dict = {}
+        for cell in self.cells:
+            for cons in cell.wgts.keys():
+                wgt_dict[(cell.ID, cons)] = sum([cell.wgts[cons][j] for j in costmaps])
+            
+        #Normalize dict values between 1-10
+        max_wgt = max(wgt_dict.values())
+        min_wgt = min(wgt_dict.values())
+        for key in wgt_dict.keys():
+            wgt_dict[key] = 1 + (wgt_dict[key] - min_wgt) * 9 / (max_wgt - min_wgt)
+
+        return wgt_dict
+
     def spikeWave(self, startPt, goalPt, costmap=[0]):
         """
         Performs spikewave propogation on graph.
         """
+
+        wgt_dict = self.normalizeWeights(costmap)
 
         startID = self.points[startPt[0], startPt[1]]
         goalID = self.points[goalPt[0], goalPt[1]]
@@ -291,7 +313,7 @@ class PlaceNetwork:
 
                 #Set delay buffers of connections as weights of those connections:
                 for cons in self.cells[fid[i]].delaybuffs.keys():
-                    self.cells[fid[i]].delaybuffs[cons] = round(sum([self.cells[fid[i]].wgts[cons][j] for j in costmap]))
+                    self.cells[fid[i]].delaybuffs[cons] = round(wgt_dict[(fid[i], cons)])#round(sum([self.cells[fid[i]].wgts[cons][j] for j in costmap]))
                     
                 #Check if neuron is goal locations
                 if self.cells[fid[i]].ID == goalID:
@@ -401,6 +423,10 @@ if __name__ == "__main__":
     data = loadNetwork("chkpt")
     network.loadFromFile(data)
 
+    p = network.spikeWave((0, 0), (0, 16), costmap=[0, 1, 4])
+    print(p)
+
+    '''
     network.plotCells(costmap=0, image="images/map/mapraw.jpg", title="Current Cost Map")
     plt.savefig("images/current_cost_map.png")
     plt.show()
@@ -420,6 +446,4 @@ if __name__ == "__main__":
     plt.savefig("images/wifi_cost_map.png")
     plt.show()
     plt.close()
-    
-
-    #network.printLatLon()
+    '''
