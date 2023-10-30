@@ -749,8 +749,8 @@ if __name__ == "__main__":
 
     if args.type == 'spikewave':
         
-        wp_end = np.array([3, 4])
-        wp_start = np.array([3 ,4])
+        wp_end = np.array([4, 12])
+        wp_start = np.array([4 ,12])
 
         n1 = network.mapsizelat
         n2 = network.mapsizelon
@@ -792,7 +792,7 @@ if __name__ == "__main__":
                     # set wp_end to the end of the path just in case path was not reached.
 
                     #write path
-                    file.write(str(pts[::-1]))
+                    file.write(str(pts[::-1])+'\n')
 
                     #UPDATE
                     network.eProp(costs, p)
@@ -868,3 +868,4 @@ if __name__ == "__main__":
         jackal.rosbag(False) # stop recording
     
     saveNetwork(network, "chkpt")
+
