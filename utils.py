@@ -1,6 +1,18 @@
 import numpy as np
 import pickle
 
+def shortenLine(point1, point2, shorten_amount):
+    # Calculate the direction vector between the two points
+    dx = point2[0] - point1[0]
+    dy = point2[1] - point1[1]
+
+    # Calculate the new endpoints of the shortened line segment
+    new_point1 = (point1[0] + dx * shorten_amount, point1[1] + dy * shorten_amount)
+    new_point2 = (point2[0] - dx * shorten_amount, point2[1] - dy * shorten_amount)
+
+    return new_point1, new_point2
+
+
 def haversineDistance(lat1, lon1, lat2, lon2):
     """
     Calculate the distance between two points on the Earth's surface

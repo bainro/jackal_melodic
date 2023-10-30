@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
-from utils import haversineDistance, saveNetwork, loadNetwork
+from utils import haversineDistance, saveNetwork, loadNetwork, shortenLine
 
 class PlaceCell:
     """
@@ -79,6 +79,86 @@ class PlaceNetwork:
             avg += self.cells[connected].wgts[cell.ID][costmap]
         return avg / len(cell.wgts.keys())        
 
+    def plotPath(self, path, costmap=0, image=None, title="Path"):
+
+
+        arrow_properties = dict(
+            arrowstyle='->, head_length=0.4, head_width=0.4',
+            edgecolor='black',
+            linewidth=2
+        )
+
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_axes([0.05, 0.05, 0.85, 0.85])
+        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+
+        #Get colors
+        colors = []
+        for cell in self.cells:
+            colors.append(self.getAvgWgt(cell, costmap))
+        colors = np.array(colors)
+        cmap = plt.get_cmap('viridis')
+        norm = Normalize(vmin=colors.min(), vmax=colors.max())
+        sm = ScalarMappable(cmap=cmap, norm=norm)
+        color_vectors = sm.to_rgba(colors, alpha=None)
+
+        ax_colorbar = fig.add_axes([0.925, 0.1, 0.03, 0.65])
+        cbar = plt.colorbar(sm, cax=ax_colorbar)
+
+        cellpairs = []
+
+        for i, cell in enumerate(self.cells):
+            if cell.ID in path:
+                alph = 1.0
+                ms = 12
+            else:
+                alph = 0.25
+                ms = 10
+
+            if colors[i] == 1.0: 
+                ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms, color="black", zorder=2, alpha=alph)
+            else:
+                ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms, color=color_vectors[i], zorder=2, alpha=alph)
+
+            for connected_cell in cell.connections.values():
+                if (min(cell.ID, connected_cell.ID), max(cell.ID, connected_cell.ID)) in cellpairs:
+                    continue
+                conncell = (self.points[connected_cell.ID][0], self.points[connected_cell.ID][1])
+                cell_short, conn_short = shortenLine((self.points[cell.ID][1], self.points[cell.ID][0]), (conncell[1], conncell[0]), .15)
+                cell_arr, conn_arr = shortenLine((self.points[cell.ID][1], self.points[cell.ID][0]), (conncell[1], conncell[0]), .075)
+                #print((self.points[cell.ID][0], self.points[cell.ID][1]), (conncell[0], conncell[1]))
+                #print(cell_short, conn_short)
+                #exit()
+                if cell.ID in path and connected_cell.ID in path and path.index(cell.ID) < path.index(connected_cell.ID):
+                    alph = 1.0
+                    linewidth = 2.0
+                    #ax.annotate('', xy=(self.points[cell.ID][1], self.points[cell.ID][0]),xytext=(conncell[1], conncell[0]), arrowprops=arrow_properties)
+                    ax.annotate('', xy=(cell_arr[0], cell_arr[1]),xytext=(conn_arr[0], conn_arr[1]), arrowprops=arrow_properties)
+                else:
+                    alph = 0.25
+                    linewidth = 0.5
+        
+                #conncell = (connected_cell.origin[0], connected_cell.origin[1])
+                #plt.plot([cell.origin[1], conncell[1]], [cell.origin[0], conncell[0]], 'ko-', zorder=0)
+
+                #ax.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]],'k-', zorder=1, linewidth=linewidth, marker='', alpha=alph)
+                ax.plot([cell_short[0], conn_short[0]], [cell_short[1], conn_short[1]],'k-', zorder=1, linewidth=linewidth, marker='', alpha=alph)
+                cellpairs.append((min(cell.ID, connected_cell.ID), max(cell.ID, connected_cell.ID)))
+
+        ax.set_title(title, fontsize=20)
+
+        if image is not None:
+            background_image = mpimg.imread(image)
+            square_x = 300   # Starting x-coordinate of the square
+            square_y = 0   # Starting y-coordinate of the square
+            square_size = 1400   # Size of the square (adjust as needed)
+
+            # Extract the square portion from the rectangular image
+            square_image = background_image[square_y:square_y+square_size, square_x:square_x+square_size]
+            
+            # Set the extent to fit the square plot while maintaining aspect ratio
+            ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0)
+
     def plotCells(self, costmap=0, image=None, title="Cost Map"):
         #fig, ax = plt.subplots(figsize=(12, 12))
         fig = plt.figure(figsize=(12, 12))
@@ -98,8 +178,11 @@ class PlaceNetwork:
         ax_colorbar = fig.add_axes([0.925, 0.1, 0.03, 0.65])
         cbar = plt.colorbar(sm, cax=ax_colorbar)
 
+        cellpairs = []
 
         for i, cell in enumerate(self.cells):
+            if (min(cell.ID, connected_cell.ID), max(cell.ID, connected_cell.ID)) in cellpairs:
+                continue
             if colors[i] == 1.0: 
                 ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=10, color="black", zorder=2)
             else:
@@ -115,6 +198,8 @@ class PlaceNetwork:
 
                 conncell = (self.points[connected_cell.ID][0], self.points[connected_cell.ID][1])
                 ax.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]],'ko-', zorder=1, linewidth=0.5)
+                cellpairs.append((min(cell.ID, connected_cell.ID), max(cell.ID, connected_cell.ID)))
+
 
         ax.set_title(title, fontsize=20)
 
@@ -421,13 +506,17 @@ class PlaceNetwork:
 
 if __name__ == "__main__":
     network = PlaceNetwork()
-    data = loadNetwork("chkpt")
+    data = loadNetwork("wps/wp_350")
     network.loadFromFile(data)
 
-    p = network.spikeWave((0, 0), (0, 16), costmap=[0, 1, 4])
-    print(p)
+    #(16, 7) to (5, 7) for obstacles
+    p = network.spikeWave((16, 7), (5, 7), costmap=[1])
+    network.plotPath(p, costmap=1, image="images/map/mapraw.jpg", title="Path")
+    plt.savefig("images/path.png")
+    plt.show()
+    plt.close()
 
-    '''
+    ''''
     network.plotCells(costmap=0, image="images/map/mapraw.jpg", title="Current Cost Map")
     plt.savefig("images/current_cost_map.png")
     plt.show()
@@ -438,13 +527,28 @@ if __name__ == "__main__":
     plt.show()
     plt.close()
 
-    network.plotCells(costmap=2, image="images/map/mapraw.jpg", title="GPS Cost Map")
-    plt.savefig("images/gps_cost_map.png")
+    network.plotCells(costmap=4, image="images/map/mapraw.jpg", title="Slope Cost Map")
+    plt.savefig("images/slope_cost_map.png")
     plt.show()
     plt.close()
 
-    network.plotCells(costmap=3, image="images/map/mapraw.jpg", title="WIFI Cost Map")
-    plt.savefig("images/wifi_cost_map.png")
+    network.plotCells(costmap=5, image="images/map/mapraw.jpg", title="Blocked Cost Map")
+    plt.savefig("images/block_cost_map.png")
     plt.show()
     plt.close()
     '''
+    count_one = 0
+    count_two = 0
+    count_three = 0
+    for cell in network.cells:
+        if cell.visitation > 0:
+            count_one += 1
+        if cell.visitation > 1:
+            count_two += 1
+        if cell.visitation > 2:
+            count_three += 1
+
+    print("Cells visited once: ", count_one/len(network.cells))
+    print("Cells visited twice: ", count_two/len(network.cells))
+    print("Cells visited three times: ", count_three/len(network.cells))
+    
