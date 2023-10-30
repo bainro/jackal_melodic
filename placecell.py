@@ -475,11 +475,18 @@ class PlaceNetwork:
         path = path[::-1]
         #print(path)
         for i in range(len(path) - 1):
+
+            updated_ids = []
+            for cell in self.cells:
+                if path[i+1] in cell.wgts.keys():
+                    updated_ids.append(cell.ID)
+
             for j in range(self.numcosts):
                 if costs[i][j] != -1:
-                    loss = costs[i][j] - self.cells[path[i]].wgts[path[i + 1]][j]
                     #print(f"Loss {path[i]} to {path[i + 1]}: ", loss)
-                    self.cells[path[i]].wgts[path[i+1]][j] += lr * loss * self.cells[path[i]].et
+                    for id in updated_ids:
+                        loss = costs[i][j] - self.cells[id].wgts[path[i + 1]][j]
+                        self.cells[id].wgts[path[i+1]][j] += lr * loss * self.cells[id].et
 
     def loadFromFile(self, file):
 

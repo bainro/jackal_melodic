@@ -714,6 +714,7 @@ if __name__ == "__main__":
     parser.add_argument('--rosbag', type=bool, default=False, help='Record rosbag (T/F)')
     parser.add_argument('--list', type=str, default='waypoints.txt', help='List of waypoints')
     parser.add_argument('--start', type=int, default=0, help='Starting waypoint')
+    parser.add_argument('--xy', type=tuple, default=(9, 9), help='Starting xy')
     args = parser.parse_args()
 
     # Initialize Jackal Controller and Calibrate
@@ -749,8 +750,8 @@ if __name__ == "__main__":
 
     if args.type == 'spikewave':
         
-        wp_end = np.array([4, 12])
-        wp_start = np.array([4 ,12])
+        wp_end = np.array([args.xy[0], args.xy[1]])
+        wp_start = np.array([args.xy[0], args.xy[1]])
 
         n1 = network.mapsizelat
         n2 = network.mapsizelon
