@@ -748,6 +748,35 @@ if __name__ == "__main__":
     if args.rosbag:
         jackal.rosbag() # start recording
 
+    if args.type == 'single':
+        x_start = int(input("Enter starting x: "))
+        y_start = int(input("Enter starting y: "))
+        x_end = int(input("Enter ending x: "))
+        y_end = int(input("Enter ending y: "))
+
+        costmap = int(input("Enter costmap: "))
+
+        wp_end = np.array([x_end, y_end])
+        wp_start = np.array([x_start, y_start])
+
+        p = network.spikeWave(wp_start, wp_end, costmap=[0, 1, 4, 5])
+
+        wpts = [network.cells[i].origin for i in p]
+        pts = [network.points[i] for i in p]
+        print("Path: ")
+        print(pts[::-1])
+
+        costs, reached = jackal.drivePath(wpts[::-1], network, pts[::-1])
+
+        
+        if len(p) != reached + 1:
+            print("Full path not reached")
+            p = p[len(p) - 2 - reached:]
+            pts = pts[len(pts) - 1 - reached:]
+            print("Reached up to")
+            print(pts[::-1])
+
+
     if args.type == 'spikewave':
         
         wp_end = np.array([args.xy[0], args.xy[1]])
