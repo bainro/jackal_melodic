@@ -714,7 +714,8 @@ if __name__ == "__main__":
     parser.add_argument('--rosbag', type=bool, default=False, help='Record rosbag (T/F)')
     parser.add_argument('--list', type=str, default='waypoints.txt', help='List of waypoints')
     parser.add_argument('--start', type=int, default=0, help='Starting waypoint')
-    parser.add_argument('--xy', type=tuple, default=(9, 9), help='Starting xy')
+    parser.add_argument('--x', type=int, default=9 , help='Starting x')
+    parser.add_argument('--y', type=int, default=9, help='Starting y')
     args = parser.parse_args()
 
     # Initialize Jackal Controller and Calibrate
@@ -776,11 +777,14 @@ if __name__ == "__main__":
             print("Reached up to")
             print(pts[::-1])
 
+        with open("single_log.txt", "a") as file:
+            file.write(str(pts[::-1])+'\n')
+            file.write(str(costs)+'\n')
 
-    if args.type == 'spikewave':
+    elif args.type == 'spikewave':
         
-        wp_end = np.array([args.xy[0], args.xy[1]])
-        wp_start = np.array([args.xy[0], args.xy[1]])
+        wp_end = np.array([args.x, args.y])
+        wp_start = np.array([args.x, args.y])
 
         n1 = network.mapsizelat
         n2 = network.mapsizelon
