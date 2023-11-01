@@ -1,18 +1,19 @@
 from placecell import PlaceNetwork
-from utils import loadNetwork
+from utils import loadNetwork, saveNetwork
 import numpy as np
 
 trained_network = PlaceNetwork()
 data = loadNetwork("wps/wp_350")
 trained_network.loadFromFile(data)
 
-cms = [0]#, 1, 4, 5]
+cms = [0, 1, 4, 5]
 
 for cm in cms:
     for cell in trained_network.cells:
 
         wgt_vals = {}
 
+        #Get dictionary of cell ID : wgts going into cell
         for conn in trained_network.cells:
             if cell.ID in conn.wgts.keys():
                 wgt_vals[conn.ID] = conn.wgts[cell.ID][cm]
@@ -32,12 +33,14 @@ for cm in cms:
                     trained_network.cells[key].wgts[cell.ID][cm] = maxval
 
 
-        elif count > 1:
+        elif count > 1 and count != len(vals):
             meanval = np.mean(vals[vals > 1])
             print("Multiple CASE Cell: ", cell.ID)
             print("Setting all 1s to ", meanval)
             for key in wgt_vals.keys():
                 if wgt_vals[key] == 1:
                     trained_network.cells[key].wgts[cell.ID][cm] = meanval
+
+saveNetwork(trained_network, "fixed_wgts")
 
         
