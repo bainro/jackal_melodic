@@ -760,7 +760,7 @@ if __name__ == "__main__":
         wp_end = np.array([x_end, y_end])
         wp_start = np.array([x_start, y_start])
 
-        p = network.spikeWave(wp_start, wp_end, costmap=[0, 1, 4, 5])
+        p = network.spikeWave(wp_start, wp_end, costmap=[costmap])
 
         wpts = [network.cells[i].origin for i in p]
         pts = [network.points[i] for i in p]
