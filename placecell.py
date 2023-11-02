@@ -587,7 +587,6 @@ if __name__ == "__main__":
     naive_network.initConnections()
     #(15, 1) to (9, 11) for obstacles
 
-
     p = network.spikeWave((15, 1), (9, 11), costmap=[1])
     network.plotPath(p, costmap=1, image="images/map/mapraw.jpg", title="Trained Obstacle Path (15, 1) to (9, 11)")
     plt.savefig("images/1_trained_obs.png")
@@ -600,18 +599,18 @@ if __name__ == "__main__":
     plt.show()
     plt.close()
 
-    p = network.spikeWave((16, 7), (7, 7), costmap=[1])
-    network.plotPath(p, costmap=1, image="images/map/mapraw.jpg", title="Trained Obstacle Path (16, 7) to (7, 7)")
+    p = network.spikeWave((16, 6), (6, 6), costmap=[1])
+    network.plotPath(p, costmap=1, image="images/map/mapraw.jpg", title="Trained Obstacle Path (16, 6) to (6, 6)")
     plt.savefig("images/2_trained_obs.png")
     plt.show()
     plt.close()
 
-    p = naive_network.spikeWave((16, 7), (7, 7), costmap=[1])
-    naive_network.plotPath(p, costmap=1, image="images/map/mapraw.jpg", title="Naive Obstacle Path (16, 7) to (7, 7)", diff_map=network)
+    p = naive_network.spikeWave((16, 6), (6, 6), costmap=[1])
+    naive_network.plotPath(p, costmap=1, image="images/map/mapraw.jpg", title="Naive Obstacle Path (16, 6) to (6, 6)", diff_map=network)
     plt.savefig("images/2_naive_obs.png")
     plt.show()
     plt.close()
-
+    '''
     p = network.spikeWave((0, 13), (5, 13), costmap=[4])
     network.plotPath(p, costmap=4, image="images/map/mapraw.jpg", title="Trained Slope Path (0, 13) to (5, 13)")
     plt.savefig("images/3_trained_slope.png")
@@ -623,7 +622,7 @@ if __name__ == "__main__":
     plt.savefig("images/3_naive_slope.png")
     plt.show()
     plt.close()
-
+    '''
     network.plotCells(costmap=0, image="images/map/mapraw.jpg", title="Current Cost Map")
     plt.savefig("images/current_cost_map.png")
     plt.show()
