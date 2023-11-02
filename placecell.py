@@ -79,7 +79,7 @@ class PlaceNetwork:
             avg += self.cells[connected].wgts[cell.ID][costmap]
         return avg / len(cell.wgts.keys())        
 
-    def plotPath(self, path, costmap=0, image=None, title="Path", normalized=True, diff_map=None):
+    def plotPath(self, path, costmap=0, image=None, title="Path", diff_map=None):
 
         if diff_map is not None:
             network = diff_map
@@ -91,8 +91,7 @@ class PlaceNetwork:
             linewidth=2
         )
 
-        if normalized:
-            wgts = network.normalizeWeights([costmap])
+        wgts = network.normalizeWeights(costmap)
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_axes([0.05, 0.05, 0.85, 0.85])
@@ -101,16 +100,12 @@ class PlaceNetwork:
         #Get colors
         colors = []
 
-        if normalized:
-            for cell in self.cells:
-                mean = []
-                for con in self.cells:
-                    if (con.ID, cell.ID) in wgts.keys():
-                        mean.append(wgts[(con.ID, cell.ID)])
-                colors.append(np.mean(mean))
-        else:
-            for cell in self.cells:
-                colors.append(network.getAvgWgt(cell, costmap))
+        for cell in self.cells:
+            mean = []
+            for con in self.cells:
+                if (con.ID, cell.ID) in wgts.keys():
+                    mean.append(wgts[(con.ID, cell.ID)])
+            colors.append(np.mean(mean))
 
         colors = np.array(colors)
         cmap = plt.get_cmap('inferno')
@@ -126,10 +121,10 @@ class PlaceNetwork:
         for i, cell in enumerate(self.cells):
             if cell.ID in path:
                 alph = 1.0
-                ms = 12
+                ms = 15
             else:
                 alph = 0.25
-                ms = 10
+                ms = 12
 
             if colors[i] == 1.0: 
                 ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms, color="black", zorder=2, alpha=alph)
@@ -147,16 +142,10 @@ class PlaceNetwork:
                 if cell.ID in path and connected_cell.ID in path and path.index(cell.ID) < path.index(connected_cell.ID):
                     alph = 1.0
                     linewidth = 2.0
-                    if normalized:
-                        if wgts[(cell.ID, connected_cell.ID)] == 1.0:
-                            color = 'black'
-                        else:
-                            color = cmap(norm(wgts[(connected_cell.ID, cell.ID)]))
+                    if wgts[(cell.ID, connected_cell.ID)] == 1.0:
+                        color = 'black'
                     else:
-                        if cell.wgts[connected_cell.ID][costmap] == 1.0:
-                            color = 'black'
-                        else:
-                            color = cmap(norm(cell.wgts[connected_cell.ID][costmap]))
+                        color = cmap(norm(wgts[(connected_cell.ID, cell.ID)]))
                     
                     arrow_properties['edgecolor'] = color
                     ax.annotate('', xy=(cell_arr[0], cell_arr[1]),xytext=(conn_arr[0], conn_arr[1]), arrowprops=arrow_properties, color=color)
@@ -183,32 +172,27 @@ class PlaceNetwork:
             square_image = background_image[square_y:square_y+square_size, square_x:square_x+square_size]
             
             # Set the extent to fit the square plot while maintaining aspect ratio
-            ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0)
+            ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0, alpha=0.5)
 
-    def plotCells(self, costmap=0, image=None, title="Cost Map", normalized=True):
+    def plotCells(self, costmap=0, image=None, title="Cost Map"):
         #fig, ax = plt.subplots(figsize=(12, 12))
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_axes([0.05, 0.05, 0.85, 0.85])
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
 
-        if normalized:
-            wgts = self.normalizeWeights([costmap])
+        wgts = self.normalizeWeights(costmap)
 
         #Get colors
         colors = []
 
-        if normalized:
-            for cell in self.cells:
-                mean = []
-                for con in self.cells:
-                    if (con.ID, cell.ID) in wgts.keys():
-                        mean.append(wgts[(con.ID, cell.ID)])
-                colors.append(np.mean(mean))
-        else:
-            for cell in self.cells:
-                colors.append(self.getAvgWgt(cell, costmap))
+        for cell in self.cells:
+            mean = []
+            for con in self.cells:
+                if (con.ID, cell.ID) in wgts.keys():
+                    mean.append(wgts[(con.ID, cell.ID)])
+            colors.append(np.mean(mean))
 
-
+        ms = 15
         colors = np.array(colors)
         cmap = plt.get_cmap('inferno')
         norm = Normalize(vmin=1.0, vmax=10.0)
@@ -222,9 +206,9 @@ class PlaceNetwork:
 
         for i, cell in enumerate(self.cells):
             if colors[i] == 1.0: 
-                ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=10, color="black", zorder=2)
+                ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms, color="black", zorder=2)
             else:
-                ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=10, color=color_vectors[i], zorder=2)
+                ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms, color=color_vectors[i], zorder=2)
             #Annotate cell with ID
             #plt.annotate(cell.ID, (cell.origin[1], cell.origin[0]), color='blue', zorder=3, fontsize=8)
             #plt.annotate((self.points[cell.ID][0], self.points[cell.ID][1]), (self.points[cell.ID][1], self.points[cell.ID][0] + 0.15), color='blue', zorder=3, fontsize=8)
@@ -253,7 +237,7 @@ class PlaceNetwork:
             square_image = background_image[square_y:square_y+square_size, square_x:square_x+square_size]
             
             # Set the extent to fit the square plot while maintaining aspect ratio
-            ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0)
+            ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0, alpha=0.5)
 
 
     def printLatLon(self):
@@ -587,60 +571,65 @@ if __name__ == "__main__":
     naive_network.initConnections()
     #(15, 1) to (9, 11) for obstacles
 
-    p = network.spikeWave((15, 1), (9, 11), costmap=[1])
-    network.plotPath(p, costmap=1, image="images/map/mapraw.jpg", title="Trained Obstacle Path (15, 1) to (9, 11)")
-    plt.savefig("images/1_trained_obs.png")
-    plt.show()
+    p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
+    network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Trained Path (15, 1) to (9, 11)")
+    plt.savefig("images/1_trained_combined.png")
+    #plt.show()
     plt.close()
 
     p = naive_network.spikeWave((15, 1), (9, 11), costmap=[1])
-    naive_network.plotPath(p, costmap=1, image="images/map/mapraw.jpg", title="Naive Obstacle Path (15, 1) to (9, 11)", diff_map=network)
+    naive_network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Naive Path (15, 1) to (9, 11)", diff_map=network)
     plt.savefig("images/1_naive_obs.png")
-    plt.show()
+    #plt.show()
     plt.close()
 
-    p = network.spikeWave((16, 6), (6, 6), costmap=[1])
-    network.plotPath(p, costmap=1, image="images/map/mapraw.jpg", title="Trained Obstacle Path (16, 6) to (6, 6)")
-    plt.savefig("images/2_trained_obs.png")
-    plt.show()
+    p = network.spikeWave((16, 6), (6, 6), costmap=[0, 1, 4, 5])
+    network.plotPath(p, costmap=[1], image="images/map/mapraw.jpg", title="Trained Path (16, 6) to (6, 6)")
+    plt.savefig("images/2_trained_combined.png")
+    #plt.show()
     plt.close()
 
     p = naive_network.spikeWave((16, 6), (6, 6), costmap=[1])
-    naive_network.plotPath(p, costmap=1, image="images/map/mapraw.jpg", title="Naive Obstacle Path (16, 6) to (6, 6)", diff_map=network)
+    naive_network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Naive Path (16, 6) to (6, 6)", diff_map=network)
     plt.savefig("images/2_naive_obs.png")
-    plt.show()
+    #plt.show()
     plt.close()
-    '''
-    p = network.spikeWave((0, 13), (5, 13), costmap=[4])
-    network.plotPath(p, costmap=4, image="images/map/mapraw.jpg", title="Trained Slope Path (0, 13) to (5, 13)")
-    plt.savefig("images/3_trained_slope.png")
-    plt.show()
+
+    p = network.spikeWave((0, 13), (5, 13), costmap=[0, 1, 4, 5])
+    network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Trained Path (0, 13) to (5, 13)")
+    plt.savefig("images/3_trained_combined.png")
+    #plt.show()
     plt.close()
 
     p = naive_network.spikeWave((0, 13), (5, 13), costmap=[4])
-    naive_network.plotPath(p, costmap=4, image="images/map/mapraw.jpg", title="Naive Slope Path (0, 13) to (5, 13)", diff_map=network)
+    naive_network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Naive Path (0, 13) to (5, 13)", diff_map=network)
     plt.savefig("images/3_naive_slope.png")
-    plt.show()
+    #plt.show()
     plt.close()
-    '''
-    network.plotCells(costmap=0, image="images/map/mapraw.jpg", title="Current Cost Map")
+
+    network.plotCells(costmap=[0], image="images/map/mapraw.jpg", title="Current Cost Map")
     plt.savefig("images/current_cost_map.png")
-    plt.show()
+    #plt.show()
     plt.close()
 
-    network.plotCells(costmap=1, image="images/map/mapraw.jpg", title="Obstacle Cost Map")
+    network.plotCells(costmap=[1], image="images/map/mapraw.jpg", title="Obstacle Cost Map")
     plt.savefig("images/obstacle_cost_map.png")
-    plt.show()
+    #plt.show()
     plt.close()
 
-    network.plotCells(costmap=4, image="images/map/mapraw.jpg", title="Slope Cost Map")
+    network.plotCells(costmap=[4], image="images/map/mapraw.jpg", title="Slope Cost Map")
     plt.savefig("images/slope_cost_map.png")
-    plt.show()
+    #plt.show()
     plt.close()
 
-    network.plotCells(costmap=5, image="images/map/mapraw.jpg", title="Blocked Cost Map")
+    network.plotCells(costmap=[5], image="images/map/mapraw.jpg", title="Blocked Cost Map")
     plt.savefig("images/block_cost_map.png")
-    plt.show()
+    #plt.show()
+    plt.close()
+
+    network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Combined Cost Map")
+    plt.savefig("images/combined_cost_map.png")
+    #plt.show()
     plt.close()
 
     '''
