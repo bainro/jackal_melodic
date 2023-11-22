@@ -139,7 +139,8 @@ class PlaceNetwork:
                 #print(cell_short, conn_short)
                 #exit()
 
-                if cell.ID in path and connected_cell.ID in path and path.index(cell.ID) < path.index(connected_cell.ID):
+                #Darken those in path
+                if cell.ID in path and connected_cell.ID in path and path.index(cell.ID) + 1 == path.index(connected_cell.ID):
                     alph = 1.0
                     linewidth = 2.0
                     if wgts[(cell.ID, connected_cell.ID)] == 1.0:
@@ -369,6 +370,126 @@ class PlaceNetwork:
 
         return wgt_dict
 
+    def RRTstar(self, startPt, goalPt, costmap=[0], rewire=True):
+        """
+        Performs RRT* on graph.
+        """
+
+        class Node():
+            def __init__(self, ID, parent=None, cost=0):
+                self.ID = ID
+                self.parent = parent
+                self.children = set()
+                self.cost = cost
+
+            def computeCost(self, cost, wgts):
+                if self.parent is not None:
+                    self.cost = self.parent.cost + cost
+                else:
+                    self.cost = 0
+
+                #Propagate downwards
+                for child in self.children:
+                    child.computeCost(wgts[(self.ID, child.ID)], wgts)
+
+        wgt_dict = self.normalizeWeights(costmap)
+        startID = self.points[startPt[0], startPt[1]]
+        goalID = self.points[goalPt[0], goalPt[1]]
+
+
+        choices = set(list(range(len(self.cells))))
+        choices.remove(startID)
+        startNode = Node(startID)
+        nodelist = {startID: startNode}
+        reached = False
+        while not reached:
+            randID = np.random.choice(list(choices))
+
+            #Find closest
+            closest = None
+            closest_dist = None
+            for node in nodelist.values():
+                dist = get_distance(self.points[node.ID], self.points[randID])
+                if closest is None:
+                    closest = node
+                    closest_dist = dist
+                elif dist < closest_dist:
+                    closest = node
+                    closest_dist = dist
+
+            #Extend in direction of randID
+            closest_neigh = None
+            closest_neigh_dist = None
+            for cons in self.cells[closest.ID].connections.keys():
+                dist = get_distance(self.points[cons], self.points[randID])
+                if closest_neigh is None:
+                    closest_neigh = cons
+                    closest_neigh_dist = dist
+                elif dist < closest_neigh_dist:
+                    closest_neigh = cons
+                    closest_neigh_dist = dist
+
+            best = closest_neigh
+            best_cost = wgt_dict[(closest.ID, closest_neigh)]
+            #Search surrounding nodes for better cost
+            if rewire:
+                for shared in self.cells[closest.ID].connections.keys():
+                    if shared in self.cells[closest_neigh].connections.keys() and shared in choices:
+                        cost = wgt_dict[(closest.ID, shared)]
+                        if cost < best_cost:
+                            best = shared
+                            best_cost = cost        
+
+            #Closest is a Node, closest_neigh is an ID
+            choices.remove(best)
+            newnode = Node(best, closest)
+            newnode.computeCost(wgt_dict[(closest.ID, best)], wgt_dict)
+            nodelist[best] = newnode
+            closest.children.add(newnode)
+
+            #Rewiring
+            if rewire:
+                for con in self.cells[best].connections.keys():
+                    if con in nodelist.keys():
+                        cost = nodelist[con].cost + wgt_dict[(con, best)]
+                        if cost < newnode.cost:
+                            newnode.parent.children.remove(newnode)
+                            newnode.parent = nodelist[con]
+                            newnode.parent.children.add(newnode)
+                            newnode.computeCost(wgt_dict[(con, best)], wgt_dict)
+
+
+            if best == goalID:
+                reached = True
+
+        path = [goalID]
+        parent = nodelist[goalID].parent
+        while parent != None:
+            path.append(parent.ID)
+            parent = parent.parent
+    
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_axes([0.05, 0.05, 0.85, 0.85])
+        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+
+        #Debug Graph
+        points = [self.points[i] for i in range(len(self.cells))]
+        plt.scatter([p[1] for p in points], [p[0] for p in points], color='black', alpha=0.5, zorder=0)
+
+        for node in nodelist.values():
+            for child in node.children:
+                if node.ID in path and child.ID in path and path.index(node.ID) - 1 == path.index(child.ID):
+                    plt.plot([self.points[node.ID][1], self.points[child.ID][1]], [self.points[node.ID][0], self.points[child.ID][0]], 'ro-', zorder=2)
+                else:
+                    plt.plot([self.points[node.ID][1], self.points[child.ID][1]], [self.points[node.ID][0], self.points[child.ID][0]], 'ko-', zorder=1)
+        plt.title("RRT* Graph", fontsize=20)
+        plt.savefig("images/rrt_star_graph.png")
+        plt.show()
+        plt.close()
+        ############
+
+        return path
+
     def spikeWave(self, startPt, goalPt, costmap=[0]):
         """
         Performs spikewave propogation on graph.
@@ -571,6 +692,12 @@ if __name__ == "__main__":
     naive_network.initConnections()
     #(15, 1) to (9, 11) for obstacles
 
+    p = network.RRTstar((15, 1), (9, 11), costmap=[0, 1, 4, 5])
+    network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="RRT* Path (15, 1) to (9, 11)")
+    plt.savefig("images/1_rrt_star_combined.png")
+    plt.show()
+
+    '''
     p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
     network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Trained Path (15, 1) to (9, 11)")
     plt.savefig("images/1_trained_combined.png")
@@ -632,7 +759,6 @@ if __name__ == "__main__":
     #plt.show()
     plt.close()
 
-    '''
     count_one = 0
     count_two = 0
     count_three = 0
