@@ -468,24 +468,24 @@ class PlaceNetwork:
             path.append(parent.ID)
             parent = parent.parent
     
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_axes([0.05, 0.05, 0.85, 0.85])
-        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+        #fig = plt.figure(figsize=(12, 12))
+        #ax = fig.add_axes([0.05, 0.05, 0.85, 0.85])
+        #ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
 
         #Debug Graph
-        points = [self.points[i] for i in range(len(self.cells))]
-        plt.scatter([p[1] for p in points], [p[0] for p in points], color='black', alpha=0.5, zorder=0)
+        # points = [self.points[i] for i in range(len(self.cells))]
+        # plt.scatter([p[1] for p in points], [p[0] for p in points], color='black', alpha=0.5, zorder=0)
 
-        for node in nodelist.values():
-            for child in node.children:
-                if node.ID in path and child.ID in path and path.index(node.ID) - 1 == path.index(child.ID):
-                    plt.plot([self.points[node.ID][1], self.points[child.ID][1]], [self.points[node.ID][0], self.points[child.ID][0]], 'ro-', zorder=2)
-                else:
-                    plt.plot([self.points[node.ID][1], self.points[child.ID][1]], [self.points[node.ID][0], self.points[child.ID][0]], 'ko-', zorder=1)
-        plt.title("RRT* Graph", fontsize=20)
-        plt.savefig("images/rrt_star_graph.png")
-        plt.show()
-        plt.close()
+        # for node in nodelist.values():
+        #     for child in node.children:
+        #         if node.ID in path and child.ID in path and path.index(node.ID) - 1 == path.index(child.ID):
+        #             plt.plot([self.points[node.ID][1], self.points[child.ID][1]], [self.points[node.ID][0], self.points[child.ID][0]], 'ro-', zorder=2)
+        #         else:
+        #             plt.plot([self.points[node.ID][1], self.points[child.ID][1]], [self.points[node.ID][0], self.points[child.ID][0]], 'ko-', zorder=1)
+        # plt.title("RRT* Graph", fontsize=20)
+        # plt.savefig("images/rrt_star_graph.png")
+        # plt.show()
+        # plt.close()
         ############
 
         return path
@@ -692,9 +692,13 @@ if __name__ == "__main__":
     naive_network.initConnections()
     #(15, 1) to (9, 11) for obstacles
 
-    p = network.RRTstar((15, 1), (9, 11), costmap=[0, 1, 4, 5])
-    network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="RRT* Path (15, 1) to (9, 11)")
-    plt.savefig("images/1_rrt_star_combined.png")
+    rrt_p = network.RRTstar((15, 1), (9, 11), costmap=[0, 1, 4, 5])
+    sw_p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
+
+
+    network.plotPath(rrt_p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="RRT* Path (15, 1) to (9, 11)")
+    network.plotPath(sw_p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="SWP Path (15, 1) to (9, 11)")
+    #plt.savefig("images/1_rrt_star_combined.png")
     plt.show()
 
     '''

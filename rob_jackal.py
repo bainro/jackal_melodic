@@ -16,6 +16,18 @@ from geometry_msgs.msg import Twist, PoseStamped
 from actionlib_msgs.msg import GoalStatusArray, GoalStatus
 from sensor_msgs.msg import LaserScan, Imu, MagneticField, NavSatFix
 
+# Initialize argparser
+parser = argparse.ArgumentParser(
+                prog='Jackal Spikewave',
+                description='Spiking Wavefront Propagation with Jackal')
+parser.add_argument('--type', type=str, default='single', help='Specifies the test type (spikewave, single, test, or goals)')
+parser.add_argument('--trials', type=int, default=10, help='Number of trials for spikewave test')
+parser.add_argument('--rosbag', type=bool, default=False, help='Record rosbag (T/F)')
+parser.add_argument('--list', type=str, default='waypoints.txt', help='List of waypoints')
+parser.add_argument('--start', type=int, default=0, help='Starting waypoint')
+parser.add_argument('--x', type=int, default=9 , help='Starting x')
+parser.add_argument('--y', type=int, default=9, help='Starting y')
+args = parser.parse_args()
 
 class JackalController:
     """
@@ -306,9 +318,41 @@ class JackalController:
                 else:
                     self.Drive(0.5, 0)
 
-
         self.obstotal += 1
         self.rate.sleep()
+
+    def computeRawCosts(self):
+        """
+        Returns current, obstacle, and slope costs for testing RRT vs SpikeWave
+        """
+        return [self.totalcurrent / self.numcurrent, self.obspenalty / self.obstotal, self.slopecost / self.slopecounter]
+
+    def drivePathTest(self, path, points):
+        """
+        Drives Jackal to path, return time, current, obstacle, and slope costs for testing RRT vs SpikeWave
+        """
+
+        totalcosts = [0.0 for i in range(4)]
+
+        for i in range(len(path)):
+            point = path[i]
+            latitude = point[0]
+            longitude = point[1]
+            print("Driving to waypoint (%d, %d)" % (points[i][0], points[i][1]))
+
+            self.turnToWaypoint(self.latitude, self.longitude, latitude, longitude)
+            starttime = time.time()
+            _, success = self.driveToWaypoint(latitude, longitude, True)
+            endtime = time.time()
+
+            costs = [endtime - starttime] + self.computeRawCosts()
+            totalcosts = [totalcosts[i] + costs[i] for i in range(len(costs))]
+
+            if not success:
+                print("Could not reach waypoint")
+                return None, False
+
+        return totalcosts, True
 
     def drivePath(self, path, network, points):
         """
@@ -705,19 +749,6 @@ if __name__ == "__main__":
     os.system("pkill -f 'throttle messages /image_proc'")
     os.system("rosrun topic_tools throttle messages /image_proc_resize/image 5 /throttled_img &")
 
-    # Initialize argparser
-    parser = argparse.ArgumentParser(
-                    prog='Jackal Spikewave',
-                    description='Spiking Wavefront Propagation with Jackal')
-    parser.add_argument('--type', type=str, default='single', help='Specifies the test type (spikewave, single, test, or goals)')
-    parser.add_argument('--trials', type=int, default=10, help='Number of trials for spikewave test')
-    parser.add_argument('--rosbag', type=bool, default=False, help='Record rosbag (T/F)')
-    parser.add_argument('--list', type=str, default='waypoints.txt', help='List of waypoints')
-    parser.add_argument('--start', type=int, default=0, help='Starting waypoint')
-    parser.add_argument('--x', type=int, default=9 , help='Starting x')
-    parser.add_argument('--y', type=int, default=9, help='Starting y')
-    args = parser.parse_args()
-
     # Initialize Jackal Controller and Calibrate
     jackal = JackalController(headingtopic='gx5/mag', gpstopic='novatel/fix')
     jackal.awaitReadings()
@@ -832,63 +863,91 @@ if __name__ == "__main__":
                     network.eProp(costs, p)
                     saveNetwork(network, "wp_" + str(args.start+t))
 
+    elif args.type == 'path':
+        x_start = int(input("Enter starting x: "))
+        y_start = int(input("Enter starting y: "))
+        x_end = int(input("Enter ending x: "))
+        y_end = int(input("Enter ending y: "))
 
-    elif args.type == 'goals':
-        wp_end = np.array([10, 10])
-        wp_start = np.array([10,10])
+        pathtype = str(input("spike or RRT"))
 
-        n1 = network.mapsizelat
-        n2 = network.mapsizelon
+        wp_end = np.array([x_end, y_end])
+        wp_start = np.array([x_start, y_start])
 
-        trials = args.trials
-        network.first = True
+        if pathtype == 'spike':
+            p = network.spikeWave(wp_start, wp_end, costmap=[0, 1, 4, 5])
+        elif pathtype == 'RRT':
+            p = network.RRTstar(wp_start, wp_end, costmap=[0, 1, 4, 5])
 
-        waypoints = []
+        wpts = [network.cells[i].origin for i in p]
+        pts = [network.points[i] for i in p]
+        print("Path: ")
+        print(pts[::-1])
 
-        if os.path.exists(args.list):
-            with open(args.list, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    parts = line.split(' ')
-                    waypoint = (int(float(parts[0])), int(float(parts[1])))
-                    waypoints.append(waypoint)
-        else:
-            print("File does not exist")
-            exit()
+        costs, reached = jackal.drivePathTest(wpts[::-1], pts[::-1])
 
-        if args.trials != 0:
-            wp_start = waypoints[args.start - 1]
-            #FiX
-            #wp_start = np.array([8, 15])
-
-
-        for i, wps in enumerate(waypoints[args.start:]):
-            wp_end = np.copy(wps)
-            p = network.spikeWave(wp_start, wp_end, costmap=[0, 5])
+        #Save to file
+        with open(f"{pathtype}_{x_start}-{y_start}_{x_end}-{y_end}.txt", "a") as file:
+            file.write(str(pts[::-1])+'\n')
+            file.write(str(costs)+'\n')
 
 
-            wpts = [network.cells[i].origin for i in p]
-            pts = [network.points[i] for i in p]
-            print("Path: ")
-            print(pts[::-1])
+    # elif args.type == 'goals':
+    #     wp_end = np.array([10, 10])
+    #     wp_start = np.array([10,10])
 
-            costs, reached = jackal.drivePath(wpts[::-1], network, pts[::-1])
+    #     n1 = network.mapsizelat
+    #     n2 = network.mapsizelon
 
-            if len(p) != reached + 1:
-                print("Full path not reached")
-                p = p[len(p) - 2 - reached:]
-                pts = pts[len(pts) - 1 - reached:]
-                print("Reached up to")
-                print(pts[::-1])
-            wp_start = np.array([pts[0][0], pts[0][1]])
-            # set wp_end to the end of the path just in case path was not reached.
+    #     trials = args.trials
+    #     network.first = True
 
-            #UPDATE
-            network.eProp(costs, p)
-            saveNetwork(network, "wp_" + str(args.start+i))
-            if i % 5:
-                saveNetwork(network, "chkpt")
-        saveNetwork(network, "chkpt")
+    #     waypoints = []
+
+    #     if os.path.exists(args.list):
+    #         with open(args.list, 'r') as f:
+    #             for line in f:
+    #                 line = line.strip()
+    #                 parts = line.split(' ')
+    #                 waypoint = (int(float(parts[0])), int(float(parts[1])))
+    #                 waypoints.append(waypoint)
+    #     else:
+    #         print("File does not exist")
+    #         exit()
+
+    #     if args.trials != 0:
+    #         wp_start = waypoints[args.start - 1]
+    #         #FiX
+    #         #wp_start = np.array([8, 15])
+
+
+    #     for i, wps in enumerate(waypoints[args.start:]):
+    #         wp_end = np.copy(wps)
+    #         p = network.spikeWave(wp_start, wp_end, costmap=[0, 5])
+
+
+    #         wpts = [network.cells[i].origin for i in p]
+    #         pts = [network.points[i] for i in p]
+    #         print("Path: ")
+    #         print(pts[::-1])
+
+    #         costs, reached = jackal.drivePath(wpts[::-1], network, pts[::-1])
+
+    #         if len(p) != reached + 1:
+    #             print("Full path not reached")
+    #             p = p[len(p) - 2 - reached:]
+    #             pts = pts[len(pts) - 1 - reached:]
+    #             print("Reached up to")
+    #             print(pts[::-1])
+    #         wp_start = np.array([pts[0][0], pts[0][1]])
+    #         # set wp_end to the end of the path just in case path was not reached.
+
+    #         #UPDATE
+    #         network.eProp(costs, p)
+    #         saveNetwork(network, "wp_" + str(args.start+i))
+    #         if i % 5:
+    #             saveNetwork(network, "chkpt")
+    #     saveNetwork(network, "chkpt")
 
         
 
