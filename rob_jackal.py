@@ -325,14 +325,14 @@ class JackalController:
         """
         Returns current, obstacle, and slope costs for testing RRT vs SpikeWave
         """
-        return [self.totalcurrent / self.numcurrent, self.obspenalty / self.obstotal, self.slopecost / self.slopecounter]
+        return [self.totalcurrent, self.numcurrent, self.obspenalty, self.obstotal, self.slopecost, self.slopecounter]
 
     def drivePathTest(self, path, points):
         """
         Drives Jackal to path, return time, current, obstacle, and slope costs for testing RRT vs SpikeWave
         """
 
-        totalcosts = [0.0 for i in range(4)]
+        totalcosts = []
 
         for i in range(len(path)):
             point = path[i]
@@ -346,7 +346,7 @@ class JackalController:
             endtime = time.time()
 
             costs = [endtime - starttime] + self.computeRawCosts()
-            totalcosts = [totalcosts[i] + costs[i] for i in range(len(costs))]
+            totalcosts.append(costs)
 
             if not success:
                 print("Could not reach waypoint")
