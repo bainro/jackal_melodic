@@ -405,8 +405,8 @@ class PlaceNetwork:
         while not reached:
 
             closest = None
-            closest_neigh = None
-            while closest is None and closest_neigh is None:
+            best = None
+            while closest is None or best is None:
                 randID = np.random.choice(list(choices))
                 #Find closest
                 closest = None
@@ -433,15 +433,15 @@ class PlaceNetwork:
                             closest_neigh_dist = dist
 
                 best = closest_neigh
-                best_cost = wgt_dict[(closest.ID, closest_neigh)]
-                #Search surrounding nodes for better cost
-                if rewire:
-                    for shared in self.cells[closest.ID].connections.keys():
-                        if shared in self.cells[closest_neigh].connections.keys() and shared in choices:
-                            cost = wgt_dict[(closest.ID, shared)]
-                            if cost < best_cost:
-                                best = shared
-                                best_cost = cost        
+            best_cost = wgt_dict[(closest.ID, best)]
+            #Search surrounding nodes for better cost
+            if rewire:
+                for shared in self.cells[closest.ID].connections.keys():
+                    if shared in self.cells[closest_neigh].connections.keys() and shared in choices:
+                        cost = wgt_dict[(closest.ID, shared)]
+                        if cost < best_cost:
+                            best = shared
+                            best_cost = cost        
 
             #Closest is a Node, closest_neigh is an ID
             choices.remove(best)
