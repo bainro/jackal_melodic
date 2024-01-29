@@ -79,7 +79,7 @@ class PlaceNetwork:
             avg += self.cells[connected].wgts[cell.ID][costmap]
         return avg / len(cell.wgts.keys())        
 
-    def plotPath(self, path, costmap=0, image=None, title="Path", diff_map=None):
+    def plotPath(self, path, costmap=[0], image=None, title="Path", diff_map=None):
 
         if diff_map is not None:
             network = diff_map
