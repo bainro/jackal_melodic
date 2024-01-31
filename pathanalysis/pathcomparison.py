@@ -52,7 +52,7 @@ def astar(network, startPt, goalPt, costmap):
             if neighborID not in visited:
                 cost = current.priority + round(wgt_dict[(current.item, neighborID)])
                 heuristic = get_distance(network.points[neighborID], network.points[goalID])
-                open.put_nowait(Item(item=neighborID, priority=cost + heuristic, distance_tie=get_distance(network.points[neighborID], network.points[current.item]), camefrom=current))
+                open.put_nowait(Item(item=neighborID, priority=cost + heuristic, distance_tie=get_distance(network.points[neighborID], network.points[goalID]), camefrom=current))
 
     print("Goal couldn't be reached (shouldn't get here)")
     return None
@@ -105,30 +105,19 @@ for start in wps:
 np.random.shuffle(st_ends)
 total = 0
 matched = 0
-for test_pt in tqdm(st_ends[0:100]):
-    # astar_p = astar(network, test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
-    # naive_p = astar(naive_network, test_pt[0], test_pt[1], costmap=[0])
-    # sw_p = network.spikeWave(test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
-    # rrt_p = network.RRTstar(test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
-
-    # astar_pths.append(astar_p)
-    # naive_pths.append(naive_p)
-    # sw_pths.append(sw_p)
-    # rrt_pths.append(rrt_p)
-
-    #astar_p = astar(network, test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
-    #sw_p = network.spikeWave(test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
-
+for test_pt in tqdm(st_ends[0:10]):
     astar_p = astar(network, test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
+    naive_p = astar(naive_network, test_pt[0], test_pt[1], costmap=[0])
     sw_p = network.spikeWave(test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
+    rrt_p = network.RRTstar(test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
 
-    if astar_p == sw_p:
-        matched += 1
-    total += 1
+    astar_pths.append(astar_p)
+    naive_pths.append(naive_p)
+    sw_pths.append(sw_p)
+    rrt_pths.append(rrt_p)
 
 
-print(matched / total)
-# pickle.dump(astar_pths, open("astar_pths.pkl", "wb"))
-# pickle.dump(naive_pths, open("naive_pths.pkl", "wb"))
-# pickle.dump(sw_pths, open("sw_pths.pkl", "wb"))
-# pickle.dump(rrt_pths, open("rrt_pths.pkl", "wb"))
+pickle.dump(astar_pths, open("astar_pths.pkl", "wb"))
+pickle.dump(naive_pths, open("naive_pths.pkl", "wb"))
+pickle.dump(sw_pths, open("sw_pths.pkl", "wb"))
+pickle.dump(rrt_pths, open("rrt_pths.pkl", "wb"))
