@@ -105,7 +105,7 @@ for start in wps:
 np.random.shuffle(st_ends)
 total = 0
 matched = 0
-for test_pt in tqdm(st_ends[0:10]):
+for test_pt in tqdm(st_ends):
     astar_p = astar(network, test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
     naive_p = astar(naive_network, test_pt[0], test_pt[1], costmap=[0])
     sw_p = network.spikeWave(test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
