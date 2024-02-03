@@ -695,11 +695,15 @@ if __name__ == "__main__":
     naive_network.initConnections()
     #(15, 1) to (9, 11) for obstacles
 
-    rrt_p = network.RRTstar((15, 1), (9, 11), costmap=[0, 1, 4, 5])
+    d1 = network.cells[0].origin
+    d2 = network.cells[1].origin
+    print(haversineDistance(d1[0], d1[1], d2[0], d2[1]))
+
+    #rrt_p = network.RRTstar((15, 1), (9, 11), costmap=[0, 1, 4, 5])
     sw_p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
 
 
-    network.plotPath(rrt_p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="RRT* Path (15, 1) to (9, 11)")
+    #network.plotPath(rrt_p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="RRT* Path (15, 1) to (9, 11)")
     network.plotPath(sw_p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="SWP Path (15, 1) to (9, 11)")
     #plt.savefig("images/1_rrt_star_combined.png")
     plt.show()
