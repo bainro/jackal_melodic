@@ -878,6 +878,8 @@ if __name__ == "__main__":
             p = network.spikeWave(wp_start, wp_end, costmap=[0, 1, 4, 5])
         elif pathtype == 'RRT':
             p = network.RRTstar(wp_start, wp_end, costmap=[0, 1, 4, 5])
+        elif pathtype == 'astar':
+            p = network.astar(wp_start, wp_end, costmap=[0, 1, 4, 5])
 
         wpts = [network.cells[i].origin for i in p]
         pts = [network.points[i] for i in p]

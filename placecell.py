@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
+from queue import PriorityQueue
+from dataclasses import dataclass, field
+from typing import Any
 from utils import haversineDistance, saveNetwork, loadNetwork, shortenLine, get_distance
 
 class PlaceCell:
@@ -370,6 +373,57 @@ class PlaceNetwork:
 
         return wgt_dict
 
+    def astar(self, startPt, goalPt, costmap=[0]):
+        """
+        Performs A* on graph.
+        """
+        def getPath(end):
+            path = []
+            current = end
+            while current.camefrom is not None:
+                path.append(current.item)
+                current = current.camefrom
+
+            path.append(current.item)
+            return path
+        
+        @dataclass(order=True)
+        class Item:
+            priority: float
+            distance_tie: float
+            item: Any=field(compare=False)
+            camefrom: Any=field(compare=False)
+            
+        open = PriorityQueue()
+        visited = set()
+        
+        wgt_dict = network.normalizeWeights(costmap)
+        startID = network.points[startPt[0], startPt[1]]
+        goalID = network.points[goalPt[0], goalPt[1]]
+
+        open.put_nowait(Item(item=startID, priority=0, distance_tie=0.0, camefrom=None))
+
+        while not open.empty():
+            
+            current = open.get_nowait()
+
+            if current.item == goalID:
+                return getPath(current)
+
+            visited.add(current.item)
+
+            neighbors = [i.ID for i in network.cells[current.item].connections.values()]
+            for neighborID in neighbors:
+                if neighborID not in visited:
+                    cost = current.priority + round(wgt_dict[(current.item, neighborID)])
+                    heuristic = get_distance(network.points[neighborID], network.points[goalID])
+                    open.put_nowait(Item(item=neighborID, priority=cost + heuristic, distance_tie=get_distance(network.points[neighborID], network.points[goalID]), camefrom=current))
+
+        print("Goal couldn't be reached (shouldn't get here)")
+        return None
+
+
+
     def RRTstar(self, startPt, goalPt, costmap=[0], rewire=True):
         """
         Performs RRT* on graph.
@@ -695,16 +749,21 @@ if __name__ == "__main__":
     naive_network.initConnections()
     #(15, 1) to (9, 11) for obstacles
 
-    d1 = network.cells[0].origin
-    d2 = network.cells[1].origin
-    print(haversineDistance(d1[0], d1[1], d2[0], d2[1]))
+    #d1 = network.cells[0].origin
+    #d2 = network.cells[1].origin
+    #print(haversineDistance(d1[0], d1[1], d2[0], d2[1]))
 
-    #rrt_p = network.RRTstar((15, 1), (9, 11), costmap=[0, 1, 4, 5])
+    rrt_p = network.RRTstar((15, 1), (9, 11), costmap=[0, 1, 4, 5])
     sw_p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
+    astar_p = network.astar((15, 1), (9, 11), costmap=[0, 1, 4, 5])
+
+    print("RRT* Path: ", rrt_p)
+    print("SpikeWave Path: ", sw_p)
+    print("A* Path: ", astar_p)
 
 
     #network.plotPath(rrt_p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="RRT* Path (15, 1) to (9, 11)")
-    network.plotPath(sw_p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="SWP Path (15, 1) to (9, 11)")
+    #network.plotPath(sw_p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="SWP Path (15, 1) to (9, 11)")
     #plt.savefig("images/1_rrt_star_combined.png")
     plt.show()
 
