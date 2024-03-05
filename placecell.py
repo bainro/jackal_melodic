@@ -1,12 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-from matplotlib.colors import Normalize
+from matplotlib.colors import Normalize, BoundaryNorm
+import matplotlib
+from matplotlib.lines import Line2D
 from matplotlib.cm import ScalarMappable
 from queue import PriorityQueue
 from dataclasses import dataclass, field
 from typing import Any
-from utils import haversineDistance, saveNetwork, loadNetwork, shortenLine, get_distance
+from utils import haversineDistance, saveNetwork, loadNetwork, shortenLine, get_distance, create_custom_cmap
 
 class PlaceCell:
     """
@@ -178,7 +180,80 @@ class PlaceNetwork:
             # Set the extent to fit the square plot while maintaining aspect ratio
             ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0, alpha=0.5)
 
-    def plotCells(self, costmap=0, image=None, title="Cost Map"):
+    def plotEtrace(self, costmap=[0], image=None, title="eTrace", path=None):
+        #fig, ax = plt.subplots(figsize=(12, 12))
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_axes([0.05, 0.05, 0.85, 0.85])
+        ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
+
+        wgts = self.normalizeWeights(costmap)
+
+        #Get colors
+        colors = []
+
+        for cell in self.cells:
+            colors.append(cell.et)
+
+        ms = 15
+        colors = np.array(colors)
+        cmap = plt.get_cmap('inferno')
+        norm = Normalize(vmin=0.0, vmax=1.0)
+        sm = ScalarMappable(cmap=cmap, norm=norm)
+        color_vectors = sm.to_rgba(colors, alpha=None)
+
+        ax_colorbar = fig.add_axes([0.925, 0.1, 0.03, 0.65])
+        cbar = plt.colorbar(sm, cax=ax_colorbar)
+        cbar.set_ticks(np.arange(0, 1.1, 0.1))
+        cbar.ax.tick_params(labelsize=24)
+
+        cellpairs = []
+
+        for i, cell in enumerate(self.cells):
+            ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms, color=color_vectors[i], zorder=2)
+
+            #Plot red outline if in path
+            if path is not None and cell.ID in path:
+                ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms+3, color="red", zorder=1)
+
+            #Annotate cell with ID
+            #plt.annotate(cell.ID, (cell.origin[1], cell.origin[0]), color='blue', zorder=3, fontsize=8)
+            #plt.annotate((self.points[cell.ID][0], self.points[cell.ID][1]), (self.points[cell.ID][1], self.points[cell.ID][0] + 0.15), color='blue', zorder=3, fontsize=8)
+            #plt.text(cell.origin[1], cell.origin[0], f'{cell.ID}')
+            
+            for connected_cell in cell.connections.values():
+                if (min(cell.ID, connected_cell.ID), max(cell.ID, connected_cell.ID)) in cellpairs:
+                    continue
+                #conncell = (connected_cell.origin[0], connected_cell.origin[1])
+                #plt.plot([cell.origin[1], conncell[1]], [cell.origin[0], conncell[0]], 'ko-', zorder=0)
+
+                conncell = (self.points[connected_cell.ID][0], self.points[connected_cell.ID][1])
+                if path is not None:
+                    if cell.ID in path and connected_cell.ID in path and abs(path.index(cell.ID) - path.index(connected_cell.ID)) == 1:
+                        ax.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]],'o-', color='crimson', zorder=1, linewidth=2.5)
+                    else:
+                        ax.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]],'ko-', zorder=1, linewidth=0.5)
+                else:
+                    ax.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]],'ko-', zorder=1, linewidth=0.5)
+                cellpairs.append((min(cell.ID, connected_cell.ID), max(cell.ID, connected_cell.ID)))
+
+        if title is not None:
+            ax.set_title(title, fontsize=30)
+
+        if image is not None:
+            background_image = mpimg.imread(image)
+            square_x = 300   # Starting x-coordinate of the square
+            square_y = 0   # Starting y-coordinate of the square
+            square_size = 1400   # Size of the square (adjust as needed)
+
+            # Extract the square portion from the rectangular image
+            square_image = background_image[square_y:square_y+square_size, square_x:square_x+square_size]
+            
+            # Set the extent to fit the square plot while maintaining aspect ratio
+            ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0, alpha=0.5)
+
+        plt.margins(0)
+
+    def plotCells(self, costmap=0, image=None, title="Cost Map", path=None, colorscale=plt.cm.Set1):
         #fig, ax = plt.subplots(figsize=(12, 12))
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_axes([0.05, 0.05, 0.85, 0.85])
@@ -194,25 +269,29 @@ class PlaceNetwork:
             for con in self.cells:
                 if (con.ID, cell.ID) in wgts.keys():
                     mean.append(wgts[(con.ID, cell.ID)])
-            colors.append(np.mean(mean))
+            colors.append(round(np.mean(mean)))
 
         ms = 15
         colors = np.array(colors)
-        cmap = plt.get_cmap('inferno')
+        #print(colors)
+        cmap = create_custom_cmap()
         norm = Normalize(vmin=1.0, vmax=10.0)
         sm = ScalarMappable(cmap=cmap, norm=norm)
         color_vectors = sm.to_rgba(colors, alpha=None)
 
+        bounds = [1, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5]#, 9.5, 10]
+        norm = BoundaryNorm(bounds, cmap.N)
+
         ax_colorbar = fig.add_axes([0.925, 0.1, 0.03, 0.65])
         cbar = plt.colorbar(sm, cax=ax_colorbar)
+        cbar = plt.colorbar(sm, cax=ax_colorbar, ticks=np.arange(0, 9), boundaries=bounds)
+        cbar.ax.tick_params(labelsize=24)
 
         cellpairs = []
 
         for i, cell in enumerate(self.cells):
-            if colors[i] == 1.0: 
-                ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms, color="black", zorder=2)
-            else:
-                ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms, color=color_vectors[i], zorder=2)
+            ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms, color=color_vectors[i], zorder=2)
+
             #Annotate cell with ID
             #plt.annotate(cell.ID, (cell.origin[1], cell.origin[0]), color='blue', zorder=3, fontsize=8)
             #plt.annotate((self.points[cell.ID][0], self.points[cell.ID][1]), (self.points[cell.ID][1], self.points[cell.ID][0] + 0.15), color='blue', zorder=3, fontsize=8)
@@ -228,8 +307,22 @@ class PlaceNetwork:
                 ax.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]],'ko-', zorder=1, linewidth=0.5)
                 cellpairs.append((min(cell.ID, connected_cell.ID), max(cell.ID, connected_cell.ID)))
 
+        if path is not None:
 
-        ax.set_title(title, fontsize=20)
+            #Cell outlines
+            for i, p in enumerate(path):
+                for cell in self.cells:
+                    if cell.ID in p:
+                        ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms+4, color=colorscale(i), zorder=1)
+
+            #Path outlines
+            for j, p in enumerate(path):
+                for i in range(len(p) - 1):
+                    ax.plot([self.points[p[i]][1], self.points[p[i+1]][1]], [self.points[p[i]][0], self.points[p[i+1]][0]],'o-', color=colorscale(j), zorder=1, linewidth=3.0)
+
+
+
+        ax.set_title(title, fontsize=30)
 
         if image is not None:
             background_image = mpimg.imread(image)
@@ -242,6 +335,8 @@ class PlaceNetwork:
             
             # Set the extent to fit the square plot while maintaining aspect ratio
             ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0, alpha=0.5)
+
+        plt.margins(0)
 
 
     def printLatLon(self):
@@ -739,33 +834,79 @@ class PlaceNetwork:
                 self.cells[cons].connections[cell.ID] = cell
 
 
-if __name__ == "__main__":
-    network = PlaceNetwork()
-    data = loadNetwork("fixed_wgts")
-    network.loadFromFile(data)
+def contLearningGraph():
+    matplotlib.rc('font', family='serif')
+    network100 = PlaceNetwork()
+    data100 = loadNetwork("fixed_wgts")
+    network100.loadFromFile(data100)
 
-    naive_network = PlaceNetwork()
-    naive_network.initAldritch(numcosts=6)
-    naive_network.initConnections()
-    #(15, 1) to (9, 11) for obstacles
-
-    #d1 = network.cells[0].origin
-    #d2 = network.cells[1].origin
-    #print(haversineDistance(d1[0], d1[1], d2[0], d2[1]))
-
-    rrt_p = network.RRTstar((15, 1), (9, 11), costmap=[0, 1, 4, 5])
-    sw_p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
-    astar_p = network.astar((15, 1), (9, 11), costmap=[0, 1, 4, 5])
-
-    print("RRT* Path: ", rrt_p)
-    print("SpikeWave Path: ", sw_p)
-    print("A* Path: ", astar_p)
+    network50 = PlaceNetwork()
+    data50 = loadNetwork("wps/wp_175")
+    network50.loadFromFile(data50)
 
 
-    #network.plotPath(rrt_p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="RRT* Path (15, 1) to (9, 11)")
-    #network.plotPath(sw_p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="SWP Path (15, 1) to (9, 11)")
-    #plt.savefig("images/1_rrt_star_combined.png")
+    network0 = PlaceNetwork()
+    network0.initAldritch(numcosts=6)
+    network0.initConnections()
+
+    path = ((13, 5), (0, 13))
+
+    p100 = network100.spikeWave(path[0], path[1], costmap=[0, 1, 4, 5])
+    p50 = network50.spikeWave(path[0], path[1], costmap=[0, 1, 4, 5])
+    p0 = network0.spikeWave(path[0], path[1], costmap=[0, 1, 4, 5])
+
+    network100.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title=None, path=[p100, p50, p0])
+    # Specify line colors and labels
+    colors = ['tab:red', 'tab:blue', 'tab:green']
+    labels = ['100% training', '50% training', '0% training']
+    dummy_lines = [Line2D([0], [0], color=color, linewidth=2) for color in colors]
+
+    # Add legend with dummy lines and labels
+    plt.legend(dummy_lines, labels, bbox_to_anchor=(-2.0, 1.225), loc='upper right', fontsize=20)
+    plt.savefig("images/cont_learning_graph.png", dpi=900)
     plt.show()
+
+if __name__ == "__main__":
+    contLearningGraph()
+    #matplotlib.rc('font', family='serif')
+    #network = PlaceNetwork()
+    #data = loadNetwork("fixed_wgts")
+    #network.loadFromFile(data)
+
+    #network.plotCells(costmap=[0], image="images/map/mapraw.jpg", title="Current Cost Map")
+    #plt.savefig("images/current_cost_map.jpg", dpi=900)
+    #plt.show()
+    #plt.close()
+
+    #network.plotCells(costmap=[1], image="images/map/mapraw.jpg", title="Obstacle Cost Map")
+    #plt.savefig("images/obstacle_cost_map.jpg", dpi=900)
+    #plt.show()
+    #plt.close()
+
+    #network.plotCells(costmap=[4], image="images/map/mapraw.jpg", title="Slope Cost Map")
+    #plt.savefig("images/slope_cost_map.jpg", dpi=900)
+    #plt.show()
+    ##plt.close()
+
+    #network.plotCells(costmap=[5], image="images/map/mapraw.jpg", title="Blocked Cost Map")
+    #plt.savefig("images/block_cost_map.png")
+    #plt.show()
+    #plt.close()
+
+    #p1 = network.spikeWave((16, 6), (6, 6), costmap=[1])
+    #p2 = network.spikeWave((0, 13), (5, 13), costmap=[4])
+    #p3 = network.spikeWave((0, 5), (13, 10), costmap=[0])
+    #p4 = network.spikeWave((0, 11), (13, 11), costmap=[0, 1, 4, 5])
+    #network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title=None, path=[p1, p2, p3])#, p4])
+    #plt.savefig("images/combined_cost_map_annotated.jpg", dpi=1200)
+    #plt.show()
+    #plt.close()
+
+    #p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
+    #network.plotEtrace(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="eTrace")
+    #plt.savefig("images/combined_cost_map_etrace.jpg", dpi=900)
+    #plt.show()
+    #plt.close()
 
     '''
     p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
@@ -803,32 +944,9 @@ if __name__ == "__main__":
     plt.savefig("images/3_naive_slope.png")
     #plt.show()
     plt.close()
+    '''
 
-    network.plotCells(costmap=[0], image="images/map/mapraw.jpg", title="Current Cost Map")
-    plt.savefig("images/current_cost_map.png")
-    #plt.show()
-    plt.close()
-
-    network.plotCells(costmap=[1], image="images/map/mapraw.jpg", title="Obstacle Cost Map")
-    plt.savefig("images/obstacle_cost_map.png")
-    #plt.show()
-    plt.close()
-
-    network.plotCells(costmap=[4], image="images/map/mapraw.jpg", title="Slope Cost Map")
-    plt.savefig("images/slope_cost_map.png")
-    #plt.show()
-    plt.close()
-
-    network.plotCells(costmap=[5], image="images/map/mapraw.jpg", title="Blocked Cost Map")
-    plt.savefig("images/block_cost_map.png")
-    #plt.show()
-    plt.close()
-
-    network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Combined Cost Map")
-    plt.savefig("images/combined_cost_map.png")
-    #plt.show()
-    plt.close()
-
+    '''
     count_one = 0
     count_two = 0
     count_three = 0

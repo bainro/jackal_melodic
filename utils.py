@@ -73,3 +73,25 @@ def levy_flight(dims, step_size):
 
 def get_distance(x, y):
     return np.sqrt(pow(x[0] - y[0], 2.0) + pow(x[1] - y[1], 2.0))
+
+def create_custom_cmap():
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import LinearSegmentedColormap
+    # Define the color values for each range
+    colors = [
+    (0.25, 0.25, 0.25, 1.0),  # Gray for [1, 1.5)
+    plt.cm.inferno(0),     # Black for [1.5, 2.5)
+    plt.cm.inferno(0.4),  # Medium color for [2.5, 3.5)
+    plt.cm.inferno(0.6),   # Light color for [3.5, 4.5)
+    plt.cm.inferno(0.7),  # Lighter color for [4.5, 5.5)
+    plt.cm.inferno(0.8),   # Yellow for [5.5, 6.5)
+    plt.cm.inferno(0.9),   # Yellow with less green for [6.5, 7.5)
+    plt.cm.inferno(1.0),   # Yellow with even less green for [7.5, 8.5)
+    plt.cm.inferno(1.0),   # Yellow with very little green for [8.5, 9.5)
+    plt.cm.inferno(1.0)    # Dark red for [9.5, 10]
+    ]
+
+
+    # Create a custom colormap
+    custom_cmap = LinearSegmentedColormap.from_list('custom_colormap', colors, N=10)
+    return custom_cmap
