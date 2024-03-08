@@ -10,6 +10,7 @@ from tqdm import tqdm
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
+import random
 
 def calc_total_cost(network, path, costmap):
     r_path = path[::-1]
@@ -19,6 +20,13 @@ def calc_total_cost(network, path, costmap):
     for i in range(len(r_path) - 1):
         total += wgts[(r_path[i], r_path[i + 1])]
     return total
+
+if os.exists("avgs.pkl"):
+    avgs = pickle.load(open("avgs.pkl", "rb"))
+    plt.figure()
+    plt.plot(avgs)
+    plt.show()
+    sys.exit()
 
 true_network = PlaceNetwork()
 true_data = loadNetwork("fixed_wgts")
@@ -48,9 +56,10 @@ for i in range(351):
 
         total_cost = 0
 
+        tests = random.sample(st_ends, 1000)
         for pt in tqdm(st_ends):
             p = test_network.spikeWave(pt[0], pt[1], costmap=[0, 1, 4, 5])
-            total_cost += calc_total_cost(test_network, p, [0, 1, 4, 5])
+            total_cost += calc_total_cost(true_network, p, [0, 1, 4, 5])
 
         avg_cost = total_cost / len(st_ends)
         avgs.append(avg_cost)
