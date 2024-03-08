@@ -20,11 +20,12 @@ from sensor_msgs.msg import LaserScan, Imu, MagneticField, NavSatFix
 parser = argparse.ArgumentParser(
                 prog='Jackal Spikewave',
                 description='Spiking Wavefront Propagation with Jackal')
-parser.add_argument('--type', type=str, default='single', help='Specifies the test type (spikewave, single, test, or goals)')
+parser.add_argument('--type', type=str, default='single', help='Specifies the test type (spikewave, single, test, goals, path)')
 parser.add_argument('--trials', type=int, default=10, help='Number of trials for spikewave test')
 parser.add_argument('--rosbag', type=bool, default=False, help='Record rosbag (T/F)')
 parser.add_argument('--list', type=str, default='waypoints.txt', help='List of waypoints')
 parser.add_argument('--start', type=int, default=0, help='Starting waypoint')
+parser.add_argument('--learning', type=bool, default=False, help='Learning after each path (T/F)')
 parser.add_argument('--x', type=int, default=9 , help='Starting x')
 parser.add_argument('--y', type=int, default=9, help='Starting y')
 args = parser.parse_args()
@@ -331,7 +332,7 @@ class JackalController:
         """
         Drives Jackal to path, return time, current, obstacle, and slope costs for testing RRT vs SpikeWave
         """
-
+        learning_costs = []
         totalcosts = []
 
         for i in range(len(path)):
@@ -342,17 +343,17 @@ class JackalController:
 
             self.turnToWaypoint(self.latitude, self.longitude, latitude, longitude)
             starttime = time.time()
-            _, success = self.driveToWaypoint(latitude, longitude, True)
+            learncosts, success = self.driveToWaypoint(latitude, longitude, True)
             endtime = time.time()
 
             costs = [endtime - starttime] + self.computeRawCosts()
             totalcosts.append(costs)
-
+            learning_costs.append(learncosts)
             if not success:
                 print("Could not reach waypoint")
                 return None, False
 
-        return totalcosts, True
+        return totalcosts, True, learning_costs
 
     def drivePath(self, path, network, points):
         """
@@ -869,7 +870,7 @@ if __name__ == "__main__":
         x_end = int(input("Enter ending x: "))
         y_end = int(input("Enter ending y: "))
 
-        pathtype = str(input("spike or RRT"))
+        pathtype = str(input("spike or RRT or astar"))
 
         wp_end = np.array([x_end, y_end])
         wp_start = np.array([x_start, y_start])
@@ -886,7 +887,11 @@ if __name__ == "__main__":
         print("Path: ")
         print(pts[::-1])
 
-        costs, reached = jackal.drivePathTest(wpts[::-1], pts[::-1])
+        costs, reached, update_costs = jackal.drivePathTest(wpts[::-1], pts[::-1])
+
+        if args.learning:
+            network.eProp(update_costs, p)
+            saveNetwork(network, "chkpt")
 
         #Save to file
         with open(f"{pathtype}_{x_start}-{y_start}_{x_end}-{y_end}.txt", "a") as file:

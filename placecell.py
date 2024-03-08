@@ -313,12 +313,12 @@ class PlaceNetwork:
             for i, p in enumerate(path):
                 for cell in self.cells:
                     if cell.ID in p:
-                        ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms+4, color=colorscale(i), zorder=1)
+                        ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms+7, color=colorscale(i), zorder=1)
 
             #Path outlines
             for j, p in enumerate(path):
                 for i in range(len(p) - 1):
-                    ax.plot([self.points[p[i]][1], self.points[p[i+1]][1]], [self.points[p[i]][0], self.points[p[i+1]][0]],'o-', color=colorscale(j), zorder=1, linewidth=3.0)
+                    ax.plot([self.points[p[i]][1], self.points[p[i+1]][1]], [self.points[p[i]][0], self.points[p[i+1]][0]],'o-', color=colorscale(j), zorder=1, linewidth=6.0)
 
 
 
@@ -867,11 +867,15 @@ def contLearningGraph():
     plt.show()
 
 if __name__ == "__main__":
-    contLearningGraph()
-    #matplotlib.rc('font', family='serif')
-    #network = PlaceNetwork()
-    #data = loadNetwork("fixed_wgts")
-    #network.loadFromFile(data)
+    #contLearningGraph()
+    matplotlib.rc('font', family='serif')
+    network = PlaceNetwork()
+    data = loadNetwork("chkpt")
+    network.loadFromFile(data)
+
+    p = network.spikeWave((13, 11), (5, 11), costmap=[0, 1, 4, 5])
+    network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Trained Path")
+    plt.show()
 
     #network.plotCells(costmap=[0], image="images/map/mapraw.jpg", title="Current Cost Map")
     #plt.savefig("images/current_cost_map.jpg", dpi=900)
@@ -898,7 +902,15 @@ if __name__ == "__main__":
     #p3 = network.spikeWave((0, 5), (13, 10), costmap=[0])
     #p4 = network.spikeWave((0, 11), (13, 11), costmap=[0, 1, 4, 5])
     #network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title=None, path=[p1, p2, p3])#, p4])
-    #plt.savefig("images/combined_cost_map_annotated.jpg", dpi=1200)
+    # Specify line colors and labels
+
+    #colors = ['tab:red', 'tab:blue', 'tab:green']
+    #labels = ['Obstacle minimizing path', 'Slope minimizing path', 'Current minimizing path']
+    #dummy_lines = [Line2D([0], [0], color=color, linewidth=2) for color in colors]
+    # Add legend with dummy lines and labels
+    #plt.legend(dummy_lines, labels, bbox_to_anchor=(-1.8, 1.2), loc='upper right', fontsize=16)
+
+    #plt.savefig("images/combined_cost_map_annotated.pdf", dpi=1200)
     #plt.show()
     #plt.close()
 
