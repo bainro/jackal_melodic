@@ -18,7 +18,7 @@ def wgt_mse(network, true_network, costmap):
     mse = 0
     for pred, true in zip(wgts.values(), true_wgts.values()):
         mse += (pred - true) ** 2
-    return mse
+    return mse / len(wgts)
 
 true_network = PlaceNetwork()
 true_data = loadNetwork("wps/wp_350")
@@ -41,13 +41,19 @@ for i in range(351):
         loss = wgt_mse(test_network, true_network, [0, 1, 4, 5])
         totalloss.append(loss)
 
-plt.figure()
-plt.title("MSE of Weights vs Final Weights")
-plt.xlabel("Training Step")
-plt.ylabel("MSE")
+import matplotlib
+matplotlib.rc('font', family='serif')
+plt.figure(figsize=(12,12), dpi=900)
+plt.xlabel("Training Step", fontsize=30)
+plt.ylabel("MSE", fontsize=30)
 plt.xlim(0, 351)
-plt.plot(updates, totalloss)
-plt.show()
+plt.ylim(0, 3.0)
+plt.plot(updates, totalloss, linewidth=2)
+plt.margins(0)
+plt.xticks(fontsize=30)
+plt.yticks(fontsize=30)
+plt.savefig("mse.png")
+plt.savefig("mse.pdf")
 
 #pickle.dump(avgs, open("avgs.pkl", "wb"))
 
