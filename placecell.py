@@ -180,6 +180,80 @@ class PlaceNetwork:
             # Set the extent to fit the square plot while maintaining aspect ratio
             ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0, alpha=0.5)
 
+    def plotChange(self, othernetwork, costmap=[0], ax=None, image=None, title=None):
+        cellpairs = []
+
+        wgts = self.normalizeWeights([0])
+        other_wgts = othernetwork.normalizeWeights([0])
+
+        changed_pairs = []
+        val = {}
+        for key in wgts.keys():
+            if wgts[key] != other_wgts[key]:
+                changed_pairs.append(key)
+                val[key] = wgts[key] - other_wgts[key]
+
+        min_change = min(val.values())
+        max_change = max(val.values())
+
+
+        #Get a color map for the changes
+        cmap = plt.get_cmap('coolwarm')
+        norm = Normalize(vmin=-1.0, vmax=1.0)
+        sm = ScalarMappable(cmap=cmap, norm=norm)
+
+
+    
+        #cbar = plt.colorbar(sm, cax=ax_colorbar)
+        #cbar.set_ticks(np.arange(-1.0, 1.1, 0.1))
+        #cbar.ax.tick_params(labelsize=12)
+
+        ms = 20
+
+        for i, cell in enumerate(self.cells):
+            ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms, color='k', zorder=2)
+
+            #Annotate cell with ID
+            #plt.annotate(cell.ID, (cell.origin[1], cell.origin[0]), color='blue', zorder=3, fontsize=8)
+            #plt.annotate((self.points[cell.ID][0], self.points[cell.ID][1]), (self.points[cell.ID][1], self.points[cell.ID][0] + 0.15), color='blue', zorder=3, fontsize=8)
+            #plt.text(cell.origin[1], cell.origin[0], f'{cell.ID}')
+            
+            for connected_cell in cell.connections.values():
+                if (min(cell.ID, connected_cell.ID), max(cell.ID, connected_cell.ID)) in cellpairs:
+                    continue
+                #conncell = (connected_cell.origin[0], connected_cell.origin[1])
+                #plt.plot([cell.origin[1], conncell[1]], [cell.origin[0], conncell[0]], 'ko-', zorder=0)
+
+                conncell = (self.points[connected_cell.ID][0], self.points[connected_cell.ID][1])
+                
+                if (cell.ID, connected_cell.ID) in changed_pairs or (connected_cell.ID, cell.ID) in changed_pairs:
+                    key = (cell.ID, connected_cell.ID) if (cell.ID, connected_cell.ID) in changed_pairs else (connected_cell.ID, cell.ID)
+
+                    #Color on a colorbar based on the value of the change
+                    color = cmap(norm(val[key]))
+
+                    ax.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]],color = color, zorder=1, linewidth=6)
+                else:
+                    ax.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]],'ko-', zorder=1, linewidth=1)
+                cellpairs.append((min(cell.ID, connected_cell.ID), max(cell.ID, connected_cell.ID)))
+
+
+        if image is not None:
+            background_image = mpimg.imread(image)
+            square_x = 300   # Starting x-coordinate of the square
+            square_y = 0   # Starting y-coordinate of the square
+            square_size = 1400   # Size of the square (adjust as needed)
+
+            # Extract the square portion from the rectangular image
+            square_image = background_image[square_y:square_y+square_size, square_x:square_x+square_size]
+            
+            # Set the extent to fit the square plot while maintaining aspect ratio
+            ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0, alpha=0.5)
+
+        plt.margins(0)
+        ax.set_xlim(9.5, 15.5)
+        ax.set_ylim(4.5, 13.5)
+
     def plotEtrace(self, costmap=[0], image=None, title="eTrace", path=None):
         #fig, ax = plt.subplots(figsize=(12, 12))
         fig = plt.figure(figsize=(12, 12))
@@ -201,7 +275,7 @@ class PlaceNetwork:
         sm = ScalarMappable(cmap=cmap, norm=norm)
         color_vectors = sm.to_rgba(colors, alpha=None)
 
-        ax_colorbar = fig.add_axes([0.925, 0.1, 0.03, 0.65])
+        ax_colorbar = fig.add_axes([0.91, 0.1, 0.03, 0.65])
         cbar = plt.colorbar(sm, cax=ax_colorbar)
         cbar.set_ticks(np.arange(0, 1.1, 0.1))
         cbar.ax.tick_params(labelsize=24)
@@ -253,9 +327,9 @@ class PlaceNetwork:
 
         plt.margins(0)
 
-    def plotCells(self, costmap=0, image=None, title="Cost Map", path=None, colorscale=plt.cm.Set1):
+    def plotCells(self, costmap=0, image=None, title="Cost Map", path=None, colorscale=plt.cm.Set1, diff_map=False):
         #fig, ax = plt.subplots(figsize=(12, 12))
-        fig = plt.figure(figsize=(12, 12))
+        fig = plt.figure(figsize=(12, 12), dpi=900)
         ax = fig.add_axes([0.05, 0.05, 0.85, 0.85])
         ax.tick_params(left=False, right=False, labelleft=False, labelbottom=False, bottom=False)
 
@@ -271,7 +345,7 @@ class PlaceNetwork:
                     mean.append(wgts[(con.ID, cell.ID)])
             colors.append(round(np.mean(mean)))
 
-        ms = 15
+        ms = 15 #20
         colors = np.array(colors)
         #print(colors)
         cmap = create_custom_cmap()
@@ -287,10 +361,11 @@ class PlaceNetwork:
         cbar = plt.colorbar(sm, cax=ax_colorbar, ticks=np.arange(0, 9), boundaries=bounds)
         cbar.ax.tick_params(labelsize=24)
 
+
         cellpairs = []
 
         for i, cell in enumerate(self.cells):
-            ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms, color=color_vectors[i], zorder=2)
+            ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms, color=color_vectors[i], zorder=20)
 
             #Annotate cell with ID
             #plt.annotate(cell.ID, (cell.origin[1], cell.origin[0]), color='blue', zorder=3, fontsize=8)
@@ -304,23 +379,25 @@ class PlaceNetwork:
                 #plt.plot([cell.origin[1], conncell[1]], [cell.origin[0], conncell[0]], 'ko-', zorder=0)
 
                 conncell = (self.points[connected_cell.ID][0], self.points[connected_cell.ID][1])
-                ax.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]],'ko-', zorder=1, linewidth=0.5)
+                ax.plot([self.points[cell.ID][1], conncell[1]], [self.points[cell.ID][0], conncell[0]],'ko-', zorder=1, linewidth=3.5, alpha=0.25)
                 cellpairs.append((min(cell.ID, connected_cell.ID), max(cell.ID, connected_cell.ID)))
 
         if path is not None:
 
+            used = []
             #Cell outlines
             for i, p in enumerate(path):
                 for cell in self.cells:
-                    if cell.ID in p:
-                        ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms+7, color=colorscale(i), zorder=1)
+                    if cell.ID in p and cell.ID not in used:
+                        used.append(cell.ID)
+                        ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms + 8, color=colorscale(i), zorder=5+i)
+                    elif cell.ID in p and cell.ID in used:
+                        ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms + 5, color=colorscale(i), zorder=5+i)
 
             #Path outlines
             for j, p in enumerate(path):
                 for i in range(len(p) - 1):
-                    ax.plot([self.points[p[i]][1], self.points[p[i+1]][1]], [self.points[p[i]][0], self.points[p[i+1]][0]],'o-', color=colorscale(j), zorder=1, linewidth=6.0)
-
-
+                    ax.plot([self.points[p[i]][1], self.points[p[i+1]][1]], [self.points[p[i]][0], self.points[p[i+1]][0]],'o-', color=colorscale(j), zorder=5, linewidth=8.0)
 
         ax.set_title(title, fontsize=30)
 
@@ -335,6 +412,12 @@ class PlaceNetwork:
             
             # Set the extent to fit the square plot while maintaining aspect ratio
             ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0, alpha=0.5)
+
+        if diff_map:
+            ax.set_xlim(4.5, 16.5)
+            ax.set_ylim(4.5, 16.5)
+            #Plot x at the end of the path
+            ax.plot(12, 10.5, '*', color='yellow', markersize=28, zorder=10, label="Placed Obstacles")
 
         plt.margins(0)
 
@@ -492,9 +575,9 @@ class PlaceNetwork:
         open = PriorityQueue()
         visited = set()
         
-        wgt_dict = network.normalizeWeights(costmap)
-        startID = network.points[startPt[0], startPt[1]]
-        goalID = network.points[goalPt[0], goalPt[1]]
+        wgt_dict = self.normalizeWeights(costmap)
+        startID = self.points[startPt[0], startPt[1]]
+        goalID = self.points[goalPt[0], goalPt[1]]
 
         open.put_nowait(Item(item=startID, priority=0, distance_tie=0.0, camefrom=None))
 
@@ -507,12 +590,12 @@ class PlaceNetwork:
 
             visited.add(current.item)
 
-            neighbors = [i.ID for i in network.cells[current.item].connections.values()]
+            neighbors = [i.ID for i in self.cells[current.item].connections.values()]
             for neighborID in neighbors:
                 if neighborID not in visited:
                     cost = current.priority + round(wgt_dict[(current.item, neighborID)])
-                    heuristic = get_distance(network.points[neighborID], network.points[goalID])
-                    open.put_nowait(Item(item=neighborID, priority=cost + heuristic, distance_tie=get_distance(network.points[neighborID], network.points[goalID]), camefrom=current))
+                    heuristic = get_distance(self.points[neighborID], self.points[goalID])
+                    open.put_nowait(Item(item=neighborID, priority=cost + heuristic, distance_tie=get_distance(self.points[neighborID], self.points[goalID]), camefrom=current))
 
         print("Goal couldn't be reached (shouldn't get here)")
         return None
@@ -866,112 +949,132 @@ def contLearningGraph():
     plt.savefig("images/cont_learning_graph.png", dpi=900)
     plt.show()
 
+def demo_gif():
+
+    from tqdm import tqdm
+    network = PlaceNetwork()
+    network.initAldritch(numcosts=6)
+    network.initConnections()
+    network.plotCells(costmap=[0], image="images/map/mapraw.jpg", title=None)
+    plt.savefig(f"video/demo_gif/0.png", dpi=300)
+    plt.close()
+
+    for i in tqdm(range(1, 351)):
+        network = PlaceNetwork()
+        data = loadNetwork(f"wps/wp_{i}")
+        network.loadFromFile(data)
+
+        network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title=None)
+        plt.savefig(f"video/demo_gif/{i}.png", dpi=300)
+        plt.close()
+
 if __name__ == "__main__":
-    #contLearningGraph()
-    matplotlib.rc('font', family='serif')
+    #demo_gif()
+    # #contLearningGraph()
+    # matplotlib.rc('font', family='serif')
     network = PlaceNetwork()
     data = loadNetwork("chkpt")
     network.loadFromFile(data)
 
-    p = network.spikeWave((13, 11), (5, 11), costmap=[0, 1, 4, 5])
-    network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Trained Path")
-    plt.show()
+    # #p = network.spikeWave((13, 11), (5, 11), costmap=[0, 1, 4, 5])
+    # #network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Trained Path")
+    # #plt.show()
 
-    #network.plotCells(costmap=[0], image="images/map/mapraw.jpg", title="Current Cost Map")
-    #plt.savefig("images/current_cost_map.jpg", dpi=900)
-    #plt.show()
-    #plt.close()
+    # #network.plotCells(costmap=[0], image="images/map/mapraw.jpg", title="Current Cost Map")
+    # #plt.savefig("images/current_cost_map.jpg", dpi=900)
+    # #plt.show()
+    # #plt.close()
 
-    #network.plotCells(costmap=[1], image="images/map/mapraw.jpg", title="Obstacle Cost Map")
-    #plt.savefig("images/obstacle_cost_map.jpg", dpi=900)
-    #plt.show()
-    #plt.close()
+    # #network.plotCells(costmap=[1], image="images/map/mapraw.jpg", title="Obstacle Cost Map")
+    # #plt.savefig("images/obstacle_cost_map.jpg", dpi=900)
+    # #plt.show()
+    # #plt.close()
 
-    #network.plotCells(costmap=[4], image="images/map/mapraw.jpg", title="Slope Cost Map")
-    #plt.savefig("images/slope_cost_map.jpg", dpi=900)
-    #plt.show()
-    ##plt.close()
+    # #network.plotCells(costmap=[4], image="images/map/mapraw.jpg", title="Slope Cost Map")
+    # #plt.savefig("images/slope_cost_map.jpg", dpi=900)
+    # #plt.show()
+    # ##plt.close()
 
-    #network.plotCells(costmap=[5], image="images/map/mapraw.jpg", title="Blocked Cost Map")
-    #plt.savefig("images/block_cost_map.png")
-    #plt.show()
-    #plt.close()
+    # #network.plotCells(costmap=[5], image="images/map/mapraw.jpg", title="Blocked Cost Map")
+    # #plt.savefig("images/block_cost_map.png")
+    # #plt.show()
+    # #plt.close()
 
-    #p1 = network.spikeWave((16, 6), (6, 6), costmap=[1])
-    #p2 = network.spikeWave((0, 13), (5, 13), costmap=[4])
-    #p3 = network.spikeWave((0, 5), (13, 10), costmap=[0])
-    #p4 = network.spikeWave((0, 11), (13, 11), costmap=[0, 1, 4, 5])
-    #network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title=None, path=[p1, p2, p3])#, p4])
-    # Specify line colors and labels
+    # p1 = network.spikeWave((16, 6), (6, 6), costmap=[1])
+    # p2 = network.spikeWave((0, 13), (5, 13), costmap=[4])
+    # p3 = network.spikeWave((0, 5), (13, 10), costmap=[0])
+    # p4 = network.spikeWave((0, 11), (13, 11), costmap=[0, 1, 4, 5])
+    # network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title=None, path=[p1, p2, p3])#, p4])
+    # # Specify line colors and labels
 
-    #colors = ['tab:red', 'tab:blue', 'tab:green']
-    #labels = ['Obstacle minimizing path', 'Slope minimizing path', 'Current minimizing path']
-    #dummy_lines = [Line2D([0], [0], color=color, linewidth=2) for color in colors]
-    # Add legend with dummy lines and labels
-    #plt.legend(dummy_lines, labels, bbox_to_anchor=(-1.8, 1.2), loc='upper right', fontsize=16)
+    # colors = ['tab:red', 'tab:blue', 'tab:green']
+    # labels = ['Obstacle minimizing path', 'Slope minimizing path', 'Current minimizing path']
+    # dummy_lines = [Line2D([0], [0], color=color, linewidth=2) for color in colors]
+    # # Add legend with dummy lines and labels
+    # plt.legend(dummy_lines, labels, bbox_to_anchor=(-1.8, 1.2), loc='upper right', fontsize=16)
 
-    #plt.savefig("images/combined_cost_map_annotated.pdf", dpi=1200)
-    #plt.show()
-    #plt.close()
+    # plt.savefig("images/combined_cost_map_annotated_v2.pdf", dpi=1200)
+    # plt.show()
+    # plt.close()
 
-    #p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
-    #network.plotEtrace(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="eTrace")
-    #plt.savefig("images/combined_cost_map_etrace.jpg", dpi=900)
-    #plt.show()
-    #plt.close()
-
-    '''
     p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
-    network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Trained Path (15, 1) to (9, 11)")
-    plt.savefig("images/1_trained_combined.png")
-    #plt.show()
+    network.plotEtrace(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="eTrace")
+    plt.savefig("images/combined_cost_map_etrace.jpg", dpi=900)
+    plt.show()
     plt.close()
 
-    p = naive_network.spikeWave((15, 1), (9, 11), costmap=[1])
-    naive_network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Naive Path (15, 1) to (9, 11)", diff_map=network)
-    plt.savefig("images/1_naive_obs.png")
-    #plt.show()
-    plt.close()
+    # '''
+    # p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
+    # network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Trained Path (15, 1) to (9, 11)")
+    # plt.savefig("images/1_trained_combined.png")
+    # #plt.show()
+    # plt.close()
 
-    p = network.spikeWave((16, 6), (6, 6), costmap=[0, 1, 4, 5])
-    network.plotPath(p, costmap=[1], image="images/map/mapraw.jpg", title="Trained Path (16, 6) to (6, 6)")
-    plt.savefig("images/2_trained_combined.png")
-    #plt.show()
-    plt.close()
+    # p = naive_network.spikeWave((15, 1), (9, 11), costmap=[1])
+    # naive_network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Naive Path (15, 1) to (9, 11)", diff_map=network)
+    # plt.savefig("images/1_naive_obs.png")
+    # #plt.show()
+    # plt.close()
 
-    p = naive_network.spikeWave((16, 6), (6, 6), costmap=[1])
-    naive_network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Naive Path (16, 6) to (6, 6)", diff_map=network)
-    plt.savefig("images/2_naive_obs.png")
-    #plt.show()
-    plt.close()
+    # p = network.spikeWave((16, 6), (6, 6), costmap=[0, 1, 4, 5])
+    # network.plotPath(p, costmap=[1], image="images/map/mapraw.jpg", title="Trained Path (16, 6) to (6, 6)")
+    # plt.savefig("images/2_trained_combined.png")
+    # #plt.show()
+    # plt.close()
 
-    p = network.spikeWave((0, 13), (5, 13), costmap=[0, 1, 4, 5])
-    network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Trained Path (0, 13) to (5, 13)")
-    plt.savefig("images/3_trained_combined.png")
-    #plt.show()
-    plt.close()
+    # p = naive_network.spikeWave((16, 6), (6, 6), costmap=[1])
+    # naive_network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Naive Path (16, 6) to (6, 6)", diff_map=network)
+    # plt.savefig("images/2_naive_obs.png")
+    # #plt.show()
+    # plt.close()
 
-    p = naive_network.spikeWave((0, 13), (5, 13), costmap=[4])
-    naive_network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Naive Path (0, 13) to (5, 13)", diff_map=network)
-    plt.savefig("images/3_naive_slope.png")
-    #plt.show()
-    plt.close()
-    '''
+    # p = network.spikeWave((0, 13), (5, 13), costmap=[0, 1, 4, 5])
+    # network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Trained Path (0, 13) to (5, 13)")
+    # plt.savefig("images/3_trained_combined.png")
+    # #plt.show()
+    # plt.close()
 
-    '''
-    count_one = 0
-    count_two = 0
-    count_three = 0
-    for cell in network.cells:
-        if cell.visitation > 0:
-            count_one += 1
-        if cell.visitation > 1:
-            count_two += 1
-        if cell.visitation > 2:
-            count_three += 1
+    # p = naive_network.spikeWave((0, 13), (5, 13), costmap=[4])
+    # naive_network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Naive Path (0, 13) to (5, 13)", diff_map=network)
+    # plt.savefig("images/3_naive_slope.png")
+    # #plt.show()
+    # plt.close()
+    # '''
 
-    print("Cells visited once: ", count_one/len(network.cells))
-    print("Cells visited twice: ", count_two/len(network.cells))
-    print("Cells visited three times: ", count_three/len(network.cells))
-    '''
+    # '''
+    # count_one = 0
+    # count_two = 0
+    # count_three = 0
+    # for cell in network.cells:
+    #     if cell.visitation > 0:
+    #         count_one += 1
+    #     if cell.visitation > 1:
+    #         count_two += 1
+    #     if cell.visitation > 2:
+    #         count_three += 1
+
+    # print("Cells visited once: ", count_one/len(network.cells))
+    # print("Cells visited twice: ", count_two/len(network.cells))
+    # print("Cells visited three times: ", count_three/len(network.cells))
+    # '''
     
