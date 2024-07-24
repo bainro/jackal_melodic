@@ -250,6 +250,9 @@ class PlaceNetwork:
             # Set the extent to fit the square plot while maintaining aspect ratio
             ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0, alpha=0.5)
 
+        ax.plot(12, 10.5, '*', color='yellow', markersize=28, zorder=10, label="Placed Obstacles")
+        ax.plot(12, 10.5, '*', color='black', markersize=32, zorder=9)
+
         plt.margins(0)
         ax.set_xlim(9.5, 15.5)
         ax.set_ylim(4.5, 13.5)
@@ -345,7 +348,10 @@ class PlaceNetwork:
                     mean.append(wgts[(con.ID, cell.ID)])
             colors.append(round(np.mean(mean)))
 
-        ms = 15 #20
+        if diff_map:
+            ms = 20
+        else:
+            ms = 15 #20
         colors = np.array(colors)
         #print(colors)
         cmap = create_custom_cmap()
@@ -414,10 +420,19 @@ class PlaceNetwork:
             ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0, alpha=0.5)
 
         if diff_map:
+
+            #Plot red rectangle around chosen area
+            ax.plot([15.5, 9.5], [13.5, 13.5], 'r--', zorder=10, linewidth=3)
+            ax.plot([15.5, 9.5], [4.5, 4.5], 'r--', zorder=10, linewidth=3)
+
+            ax.plot([15.5, 15.5], [4.5, 13.5], 'r--', zorder=10, linewidth=3)
+            ax.plot([9.5, 9.5], [4.5, 13.5], 'r--', zorder=10, linewidth=3)
+
             ax.set_xlim(4.5, 16.5)
             ax.set_ylim(4.5, 16.5)
             #Plot x at the end of the path
-            ax.plot(12, 10.5, '*', color='yellow', markersize=28, zorder=10, label="Placed Obstacles")
+            ax.plot(12, 10.5, '*', color='yellow', markersize=30, zorder=10, label="Placed Obstacles")
+            ax.plot(12, 10.5, '*', color='black', markersize=34, zorder=9)
 
         plt.margins(0)
 
@@ -976,6 +991,10 @@ if __name__ == "__main__":
     data = loadNetwork("chkpt")
     network.loadFromFile(data)
 
+    naive_network = PlaceNetwork()
+    naive_network.initAldritch(numcosts=1)
+    naive_network.initConnections()
+
     # #p = network.spikeWave((13, 11), (5, 11), costmap=[0, 1, 4, 5])
     # #network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Trained Path")
     # #plt.show()
@@ -1000,28 +1019,27 @@ if __name__ == "__main__":
     # #plt.show()
     # #plt.close()
 
-    # p1 = network.spikeWave((16, 6), (6, 6), costmap=[1])
-    # p2 = network.spikeWave((0, 13), (5, 13), costmap=[4])
-    # p3 = network.spikeWave((0, 5), (13, 10), costmap=[0])
-    # p4 = network.spikeWave((0, 11), (13, 11), costmap=[0, 1, 4, 5])
-    # network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title=None, path=[p1, p2, p3])#, p4])
+    #p1 = network.spikeWave((16, 6), (6, 6), costmap=[1])
+    #p2 = network.spikeWave((0, 13), (5, 13), costmap=[4])
+    #p3 = network.spikeWave((0, 5), (13, 10), costmap=[0])
+    #p4 = network.spikeWave((0, 13), (11, 7), costmap=[0, 1, 4, 5])
+    #network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title=None, path=[p1, p2, p3, p4])#, p4])
     # # Specify line colors and labels
 
-    # colors = ['tab:red', 'tab:blue', 'tab:green']
-    # labels = ['Obstacle minimizing path', 'Slope minimizing path', 'Current minimizing path']
-    # dummy_lines = [Line2D([0], [0], color=color, linewidth=2) for color in colors]
+    #colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:purple']
+    #labels = ['Obstacle minimizing path', 'Slope minimizing path', 'Current minimizing path', 'Combined minimizing path']
+    #dummy_lines = [Line2D([0], [0], color=color, linewidth=2) for color in colors]
+
     # # Add legend with dummy lines and labels
-    # plt.legend(dummy_lines, labels, bbox_to_anchor=(-1.8, 1.2), loc='upper right', fontsize=16)
+    #plt.legend(dummy_lines, labels, bbox_to_anchor=(-1.8, 1.2), loc='upper right', fontsize=16)
+    #plt.savefig("revisions/combined_cost_map_annotated_v3.pdf", dpi=600)
+    #plt.close()
 
-    # plt.savefig("images/combined_cost_map_annotated_v2.pdf", dpi=1200)
-    # plt.show()
-    # plt.close()
-
-    p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
-    network.plotEtrace(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="eTrace")
-    plt.savefig("images/combined_cost_map_etrace.jpg", dpi=900)
-    plt.show()
-    plt.close()
+    #p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
+    #network.plotEtrace(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="eTrace")
+    #plt.savefig("images/combined_cost_map_etrace.jpg", dpi=900)
+    #plt.show()
+    #plt.close()
 
     # '''
     # p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
@@ -1036,11 +1054,11 @@ if __name__ == "__main__":
     # #plt.show()
     # plt.close()
 
-    # p = network.spikeWave((16, 6), (6, 6), costmap=[0, 1, 4, 5])
-    # network.plotPath(p, costmap=[1], image="images/map/mapraw.jpg", title="Trained Path (16, 6) to (6, 6)")
-    # plt.savefig("images/2_trained_combined.png")
-    # #plt.show()
-    # plt.close()
+    #p = network.spikeWave((16, 6), (6, 6), costmap=[0, 1, 4, 5])
+    #network.plotPath(p, costmap=[1], image="images/map/mapraw.jpg", title="Trained Path (16, 6) to (6, 6)")
+    #plt.savefig("images/2_trained_combined.png")
+    #plt.show()
+    #plt.close()
 
     # p = naive_network.spikeWave((16, 6), (6, 6), costmap=[1])
     # naive_network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Naive Path (16, 6) to (6, 6)", diff_map=network)
@@ -1048,11 +1066,22 @@ if __name__ == "__main__":
     # #plt.show()
     # plt.close()
 
-    # p = network.spikeWave((0, 13), (5, 13), costmap=[0, 1, 4, 5])
-    # network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Trained Path (0, 13) to (5, 13)")
-    # plt.savefig("images/3_trained_combined.png")
+    # p = naive_network.spikeWave((0, 13), (5, 13), costmap=[0])
+    # naive_network.plotCells(costmap=[0], image="images/map/mapraw.jpg", title=None, path=[p])
+    # plt.savefig("video/naive_slope.png")
     # #plt.show()
     # plt.close()
+
+    # p = network.spikeWave((0, 13), (5, 13), costmap=[0, 1, 4, 5])
+    # network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title=None, path=[p])
+    # plt.savefig("video/path_slope.png")
+    # #plt.show()
+    # plt.close()
+
+    #naive_network.plotCells(costmap=[0], image="images/map/mapraw.jpg", title=None, path=None)
+    #plt.savefig("video/empty_costmap.png")
+    #plt.show()
+    #plt.close()
 
     # p = naive_network.spikeWave((0, 13), (5, 13), costmap=[4])
     # naive_network.plotPath(p, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="Naive Path (0, 13) to (5, 13)", diff_map=network)

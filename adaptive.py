@@ -6,6 +6,38 @@ from matplotlib.lines import Line2D
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 
+def adaptive_figure():
+    matplotlib.rc('font', family='serif')
+    initial_network = PlaceNetwork()
+    initial_data = loadNetwork("chkpt")
+    initial_network.loadFromFile(initial_data)
+
+    p1_network = PlaceNetwork()
+    p1_data = loadNetwork("adaptive/trial1")
+    p1_network.loadFromFile(p1_data)
+
+    p2_network = PlaceNetwork()
+    p2_data = loadNetwork("adaptive/trial2")
+    p2_network.loadFromFile(p2_data)
+
+    p0 = initial_network.spikeWave((12, 11), (5, 11), costmap=[0, 1, 4, 5])
+    p1 = p1_network.spikeWave((12, 11), (5, 11), costmap=[0, 1, 4, 5])
+    p2 = p2_network.spikeWave((12, 11), (5, 11), costmap=[0, 1, 4, 5]) 
+
+    p1_network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title=None, path=[p0, p1, p2], diff_map=True)#, p1, p2])
+    # Specify line colors and labels
+    #colors = ['tab:red', 'tab:blue', 'tab:green', 'yellow']
+    colors = ['tab:red', 'tab:blue', 'tab:green', 'yellow']
+    labels = ["Original Path", "Path after 1st Update", "Path after 2nd Update", 'Placed Obstacle']
+    dummy_lines = [Line2D([0], [0], color=color, linewidth=2) for color in colors]
+    dummy_lines[-1] = Line2D([0], [0], marker='*', color='yellow', markersize=20, linestyle='None')
+
+    # Add legend with dummy lines and labels
+    plt.legend(dummy_lines, labels, bbox_to_anchor=(-3.0, 1.225), loc='upper right', fontsize=20)
+    plt.savefig("revisions/adaptive.pdf", dpi=600)
+    plt.close()
+    #plt.show()
+
 def graphs():
     matplotlib.rc('font', family='serif')
     initial_network = PlaceNetwork()
@@ -61,7 +93,7 @@ def graphs():
     # Add legend with dummy lines and labels
     plt.legend(dummy_lines, labels, bbox_to_anchor=(-3.0, 1.225), loc='upper right', fontsize=20)
     plt.savefig("video/path2.png")
-    plt.show()
+    plt.close()
 
     #initial_network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title=None, path=None)
     #plt.savefig("initial.png")
@@ -80,6 +112,8 @@ def get_total_cost(network, costmaps, path):
     return total_cost
 
 if __name__ == '__main__':
+    #adaptive_figure()
+    #exit()
     matplotlib.rc('font', family='serif')
     initial_network = PlaceNetwork()
     initial_data = loadNetwork("chkpt")
@@ -140,7 +174,7 @@ if __name__ == '__main__':
 
     initial_network.plotChange(p1_network, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", ax=ax1)
     p1_network.plotChange(p2_network, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", ax=ax2)
-    plt.savefig("test/weightchange_combined.pdf", dpi=900)
+    plt.savefig("revisions/weightchange_combined.pdf", dpi=900)
     plt.show()
 
     # print("Initial Path: ", p0)
