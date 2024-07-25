@@ -80,7 +80,7 @@ def rrt_analysis(paths, network):
     for path in paths:
         network.RRTstar(path[0], path[1], costmap=[0, 1, 4, 5])
 
-def run_n_for_max_distance(network, n, max_distance):
+def run_n_for_max_distance(network, n, min_distance):
     wps = []
     st_ends = []
     for cell in network.cells:
@@ -88,7 +88,9 @@ def run_n_for_max_distance(network, n, max_distance):
 
     for start in wps:
         for end in wps:
-            if start == end or get_distance(start, end) > max_distance:
+            start_origin = network.cells[network.points[start]].origin
+            end_origin = network.cells[network.points[end]].origin
+            if start == end and haversineDistance(start_origin[0], start_origin[1], end_origin[0], end_origin[1]) > min_distance:
                 continue
             st_ends.append((start, end))
 
@@ -99,8 +101,7 @@ def run_n_for_max_distance(network, n, max_distance):
     #Run each n times
     for i in tqdm(range(n)):
         #print("Iteration: ", i)
-        random.shuffle(st_ends)
-        subset = st_ends[:500]
+        subset = random.sample(st_ends, 1000)
         time_astar = timeit.timeit(lambda: astar_analysis(subset, network), number=1)
         time_spikewave = timeit.timeit(lambda: spikewave_analysis(subset, network), number=1)
         time_rrst = timeit.timeit(lambda: rrt_analysis(subset, network), number=1)
@@ -134,14 +135,14 @@ if __name__ == "__main__":
     naive_network.initConnections()
 
     if not os.path.exists("time_analysis.pkl"):
-        #Distances from 1 to 10
-        distances = [i for i in range(1, 21)]
+        #Distances from 0 to 80 every 10
+        distances = np.arange(0, 81, 10)
         data = {}
         data["naive"] = {}
         data["learned"] = {}
         for d in distances:
-            data["naive"][d] = run_n_for_max_distance(naive_network, n=5, max_distance=d)
-            data["learned"][d] = run_n_for_max_distance(network, n=5, max_distance=d)
+            #data["naive"][d] = run_n_for_max_distance(naive_network, n=5, max_distance=d)
+            data["learned"][d] = run_n_for_max_distance(network, n=5, min_distance=d)
 
         with open("time_analysis.pkl", "wb") as f:
             pickle.dump(data, f)
@@ -150,7 +151,7 @@ if __name__ == "__main__":
             data = pickle.load(f)
 
     #Plotting
-    distances = [i for i in range(1, 11)]
+    distances = [i for i in range(1,11)]
     naive_astar_means = [data["naive"][d]["astar"][0] for d in distances]
     naive_astar_std = [data["naive"][d]["astar"][1] for d in distances]
     learned_astar_means = [data["learned"][d]["astar"][0] for d in distances]
@@ -168,13 +169,16 @@ if __name__ == "__main__":
 
     #Plot means as line
     plt.figure()
-    #lt.plot(distances, naive_astar_means, label="Naive A*")
-    plt.plot(distances, learned_astar_means, label="Learned A*")
-    #plt.plot(distances, naive_spikewave_means, label="Naive SpikeWave")
-    plt.plot(distances, learned_spikewave_means, label="Learned SpikeWave")
-    #plt.plot(distances, naive_rrt_means, label="Naive RRT")
-    plt.plot(distances, learned_rrt_means, label="Learned RRT")
-    plt.xlabel("Max Distance")
+    plt.plot(distances, learned_astar_means, label="A*")
+    plt.fill_between(distances, np.array(learned_astar_means) - np.array(learned_astar_std), np.array(learned_astar_means) + np.array(learned_astar_std), alpha=0.2)
+
+    plt.plot(distances, learned_spikewave_means, label="SpikeWave")
+    plt.fill_between(distances, np.array(learned_spikewave_means) - np.array(learned_spikewave_std), np.array(learned_spikewave_means) + np.array(learned_spikewave_std), alpha=0.2)
+
+    plt.plot(distances, learned_rrt_means, label="RRT*")
+    plt.fill_between(distances, np.array(learned_rrt_means) - np.array(learned_rrt_std), np.array(learned_rrt_means) + np.array(learned_rrt_std), alpha=0.2)
+
+    plt.xlabel("Max Distance Between Waypoints")
     plt.ylabel("Time (s)")
     plt.legend()
     plt.show()
