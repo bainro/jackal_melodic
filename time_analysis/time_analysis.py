@@ -4,6 +4,8 @@ from typing import Any
 import random
 import numpy as np
 
+from astar_package import NetworkAStar, astar_analysis_package
+
 #Add parent directory to path
 import sys
 sys.path.append("..")
@@ -90,7 +92,7 @@ def run_n_for_max_distance(network, n, min_distance):
         for end in wps:
             start_origin = network.cells[network.points[start]].origin
             end_origin = network.cells[network.points[end]].origin
-            if start == end and haversineDistance(start_origin[0], start_origin[1], end_origin[0], end_origin[1]) > min_distance:
+            if start == end and haversineDistance(start_origin[0], start_origin[1], end_origin[0], end_origin[1]) < min_distance:
                 continue
             st_ends.append((start, end))
 
@@ -98,10 +100,17 @@ def run_n_for_max_distance(network, n, min_distance):
     spikewave_times = []
     rrt_times = []
 
+    astar_network = NetworkAStar(network, [0, 1, 4, 5])
+
     #Run each n times
     for i in tqdm(range(n)):
         #print("Iteration: ", i)
-        subset = random.sample(st_ends, 1000)
+        np.random.shuffle(st_ends)
+        if len(st_ends) > 500:
+            subset = st_ends[:500]
+        else:
+            subset = st_ends
+        subset = st_ends[:500]
         time_astar = timeit.timeit(lambda: astar_analysis(subset, network), number=1)
         time_spikewave = timeit.timeit(lambda: spikewave_analysis(subset, network), number=1)
         time_rrst = timeit.timeit(lambda: rrt_analysis(subset, network), number=1)

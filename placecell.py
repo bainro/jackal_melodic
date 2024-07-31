@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from matplotlib.colors import Normalize, BoundaryNorm
+import matplotlib.colors as mcolors
 import matplotlib
 from matplotlib.lines import Line2D
 from matplotlib.cm import ScalarMappable
@@ -250,8 +251,7 @@ class PlaceNetwork:
             # Set the extent to fit the square plot while maintaining aspect ratio
             ax.imshow(square_image, extent=[-1, 17, -1, 17], aspect='auto', zorder=0, alpha=0.5)
 
-        ax.plot(12, 10.5, '*', color='yellow', markersize=28, zorder=10, label="Placed Obstacles")
-        ax.plot(12, 10.5, '*', color='black', markersize=32, zorder=9)
+        ax.plot(12, 10.5, '*', color='yellow', markersize=28, zorder=10, label="Placed Obstacles", markeredgecolor='black', markeredgewidth=2)
 
         plt.margins(0)
         ax.set_xlim(9.5, 15.5)
@@ -422,17 +422,17 @@ class PlaceNetwork:
         if diff_map:
 
             #Plot red rectangle around chosen area
-            ax.plot([15.5, 9.5], [13.5, 13.5], 'r--', zorder=10, linewidth=3)
-            ax.plot([15.5, 9.5], [4.5, 4.5], 'r--', zorder=10, linewidth=3)
+            ax.plot([15.5, 9.5], [13.5, 13.5], 'r--', zorder=10, linewidth=6)
+            ax.plot([15.5, 9.5], [4.5, 4.5], 'r--', zorder=10, linewidth=6)
 
-            ax.plot([15.5, 15.5], [4.5, 13.5], 'r--', zorder=10, linewidth=3)
-            ax.plot([9.5, 9.5], [4.5, 13.5], 'r--', zorder=10, linewidth=3)
+            ax.plot([15.5, 15.5], [4.5, 13.5], 'r--', zorder=10, linewidth=6)
+            ax.plot([9.5, 9.5], [4.5, 13.5], 'r--', zorder=10, linewidth=6)
 
             ax.set_xlim(4.5, 16.5)
             ax.set_ylim(4.5, 16.5)
             #Plot x at the end of the path
-            ax.plot(12, 10.5, '*', color='yellow', markersize=30, zorder=10, label="Placed Obstacles")
-            ax.plot(12, 10.5, '*', color='black', markersize=34, zorder=9)
+            ax.plot(12, 10.5, '*', color='yellow', markersize=30, zorder=10, label="Placed Obstacles", markeredgecolor='black', markeredgewidth=2)
+            #ax.plot(12, 10.5, '*', color='black', markersize=34, zorder=9)
 
         plt.margins(0)
 
@@ -1018,22 +1018,24 @@ if __name__ == "__main__":
     # #plt.savefig("images/block_cost_map.png")
     # #plt.show()
     # #plt.close()
-
-    #p1 = network.spikeWave((16, 6), (6, 6), costmap=[1])
-    #p2 = network.spikeWave((0, 13), (5, 13), costmap=[4])
-    #p3 = network.spikeWave((0, 5), (13, 10), costmap=[0])
-    #p4 = network.spikeWave((0, 13), (11, 7), costmap=[0, 1, 4, 5])
-    #network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title=None, path=[p1, p2, p3, p4])#, p4])
+    colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:cyan']
+    cmap = mcolors.LinearSegmentedColormap.from_list('custom_colormap', colors)
+    def colorscale(index):
+        return cmap(index / (len(colors) - 1))
+    p1 = network.spikeWave((16, 6), (6, 6), costmap=[1])
+    p2 = network.spikeWave((0, 13), (5, 13), costmap=[4])
+    p3 = network.spikeWave((0, 5), (13, 10), costmap=[0])
+    p4 = network.spikeWave((0, 13), (11, 7), costmap=[0, 1, 4, 5])
+    network.plotCells(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title=None, path=[p1, p2, p3, p4], colorscale=colorscale)#, p4])
     # # Specify line colors and labels
 
-    #colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:purple']
-    #labels = ['Obstacle minimizing path', 'Slope minimizing path', 'Current minimizing path', 'Combined minimizing path']
-    #dummy_lines = [Line2D([0], [0], color=color, linewidth=2) for color in colors]
+    labels = ['Obstacle minimizing path', 'Slope minimizing path', 'Current minimizing path', 'Combined minimizing path']
+    dummy_lines = [Line2D([0], [0], color=color, linewidth=2) for color in colors]
 
     # # Add legend with dummy lines and labels
-    #plt.legend(dummy_lines, labels, bbox_to_anchor=(-1.8, 1.2), loc='upper right', fontsize=16)
-    #plt.savefig("revisions/combined_cost_map_annotated_v3.pdf", dpi=600)
-    #plt.close()
+    plt.legend(dummy_lines, labels, bbox_to_anchor=(-1.8, 1.2), loc='upper right', fontsize=16)
+    plt.savefig("revisions/combined_cost_map_annotated_v3.pdf", dpi=600)
+    plt.close()
 
     #p = network.spikeWave((15, 1), (9, 11), costmap=[0, 1, 4, 5])
     #network.plotEtrace(costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", title="eTrace")

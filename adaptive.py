@@ -30,7 +30,7 @@ def adaptive_figure():
     colors = ['tab:red', 'tab:blue', 'tab:green', 'yellow']
     labels = ["Original Path", "Path after 1st Update", "Path after 2nd Update", 'Placed Obstacle']
     dummy_lines = [Line2D([0], [0], color=color, linewidth=2) for color in colors]
-    dummy_lines[-1] = Line2D([0], [0], marker='*', color='yellow', markersize=20, linestyle='None')
+    dummy_lines[-1] = Line2D([0], [0], marker='*', color='yellow', markersize=20, linestyle='None',markeredgecolor='black', markeredgewidth=1)
 
     # Add legend with dummy lines and labels
     plt.legend(dummy_lines, labels, bbox_to_anchor=(-3.0, 1.225), loc='upper right', fontsize=20)
@@ -171,6 +171,17 @@ if __name__ == '__main__':
     ax1.set_yticks([])
     ax2.set_xticks([])
     ax2.set_yticks([])
+
+    # Customizing the spines to have red dashed lines
+    for spine in ax1.spines.values():
+        spine.set_edgecolor('red')
+        spine.set_linestyle('--')
+        spine.set_linewidth(4)
+
+    for spine in ax2.spines.values():
+        spine.set_edgecolor('red')
+        spine.set_linestyle('--')
+        spine.set_linewidth(4)
 
     initial_network.plotChange(p1_network, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", ax=ax1)
     p1_network.plotChange(p2_network, costmap=[0, 1, 4, 5], image="images/map/mapraw.jpg", ax=ax2)
