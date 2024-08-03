@@ -9,6 +9,8 @@ from astar_package import NetworkAStar, astar_analysis_package
 import sys
 sys.path.append("..")
 
+from dstar_package.dstarlite import dstar_plan
+
 from utils import loadNetwork, haversineDistance
 from placecell import PlaceNetwork
 import matplotlib
@@ -83,6 +85,10 @@ def rrt_analysis(paths, network):
     for path in paths:
         network.RRTstar(path[0], path[1], costmap=[0, 1, 4, 5])
 
+def dstar_analysis(paths, network):
+    for path in paths:
+        dstar_plan(network, path[0], path[1])
+
 def run_n_for_max_distance(network, n, min_distance):
     wps = []
     st_ends = []
@@ -103,6 +109,7 @@ def run_n_for_max_distance(network, n, min_distance):
         data = {"astar": (0, 0), "spikewave": (0, 0), "rrt": (0, 0)}
         return data
 
+    dstar_times = []
     astar_times = []
     spikewave_times = []
     rrt_times = []
@@ -115,15 +122,19 @@ def run_n_for_max_distance(network, n, min_distance):
         random.shuffle(st_ends)
         subset = st_ends[:1000]
 
+        times_dstar = timeit.timeit(lambda: dstar_analysis(subset, network), number=1)
         time_astar = timeit.timeit(lambda: astar_analysis_package(subset, astar_network), number=1)
         time_spikewave = timeit.timeit(lambda: spikewave_analysis(subset, network), number=1)
         time_rrst = timeit.timeit(lambda: rrt_analysis(subset, network), number=1)
 
+        dstar_times.append(times_dstar)
         astar_times.append(time_astar)
         spikewave_times.append(time_spikewave)
         rrt_times.append(time_rrst)
 
     #Get mean and std dev
+    dstar_mean = np.mean(dstar_times)
+    dstar_std = np.std(dstar_times)
     astar_mean = np.mean(astar_times)
     astar_std = np.std(astar_times)
     spikewave_mean = np.mean(spikewave_times)
@@ -131,7 +142,7 @@ def run_n_for_max_distance(network, n, min_distance):
     rrt_mean = np.mean(rrt_times)
     rrt_std = np.std(rrt_times)
 
-    data = {"astar": (astar_mean, astar_std), "spikewave": (spikewave_mean, spikewave_std), "rrt": (rrt_mean, rrt_std)}
+    data = {"dstar": (dstar_mean, dstar_std), "astar": (astar_mean, astar_std), "spikewave": (spikewave_mean, spikewave_std), "rrt": (rrt_mean, rrt_std)}
 
     return data
 
@@ -165,6 +176,10 @@ if __name__ == "__main__":
     matplotlib.rc('font', family='serif')
     #Plotting
     distances = [i for i in np.arange(0, 81, 10)]
+
+    learned_dstar_means = [data["learned"][d]["dstar"][0] for d in distances]
+    learned_dstar_std = [data["learned"][d]["dstar"][1] for d in distances]
+
     learned_astar_means = [data["learned"][d]["astar"][0] for d in distances]
     learned_astar_std = [data["learned"][d]["astar"][1] for d in distances]
 
@@ -184,6 +199,9 @@ if __name__ == "__main__":
 
     plt.plot(distances, learned_rrt_means, label="RRT*", color="tab:red")
     plt.fill_between(distances, np.array(learned_rrt_means) - np.array(learned_rrt_std), np.array(learned_rrt_means) + np.array(learned_rrt_std), alpha=0.2, color="tab:red")
+
+    plt.plot(distances, learned_dstar_means, label="D* Lite", color="tab:purple")
+    plt.fill_between(distances, np.array(learned_dstar_means) - np.array(learned_dstar_std), np.array(learned_dstar_means) + np.array(learned_dstar_std), alpha=0.2, color="tab:purple")
 
     plt.margins(0)
 

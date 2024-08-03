@@ -1,6 +1,7 @@
 import sys
 sys.path.append('../')
 from utils import get_distance
+sys.path.append('../dstarlite')
 from queue import PriorityQueue
 from dataclasses import dataclass, field
 from typing import Any, Tuple
@@ -9,6 +10,13 @@ from placecell import PlaceNetwork, loadNetwork
 from tqdm import tqdm
 import numpy as np
 import pickle
+from dstarlite.dstar import DStarLite
+
+sys.path.append('../dstar_package')
+from dstar_package.dstarlite import dstar_plan
+
+sys.path.append('../time_analysis')
+from astar_package import NetworkAStar
 
 def astar(network, startPt, goalPt, costmap):
 
@@ -92,6 +100,9 @@ astar_pths = []
 sw_pths = []
 rrt_pths = []
 naive_pths = []
+dstar_pths = []
+
+astar_other_pths = []
 
 for cell in network.cells:
     wps.append((network.points[cell.ID][0], network.points[cell.ID][1]))
@@ -107,21 +118,33 @@ total = 0
 matched = 0
 
 print("number of paths: ", len(st_ends))
-exit()
+#exit()
+
+costmap = network.normalizeWeights([0, 1, 4, 5])
+neighbors = {network.points[cell.ID]: [network.points[neighbor.ID] for neighbor in cell.connections.values()] for cell in network.cells}
+node_list = [network.points[cell.ID] for cell in network.cells]
 
 for test_pt in tqdm(st_ends):
-    astar_p = astar(network, test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
-    naive_p = astar(naive_network, test_pt[0], test_pt[1], costmap=[0])
-    sw_p = network.spikeWave(test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
-    rrt_p = network.RRTstar(test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
+    #astar_p = astar(network, test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
+    #naive_p = astar(naive_network, test_pt[0], test_pt[1], costmap=[0])
+    #sw_p = network.spikeWave(test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
+    #rrt_p = network.RRTstar(test_pt[0], test_pt[1], costmap=[0, 1, 4, 5])
 
-    astar_pths.append(astar_p)
-    naive_pths.append(naive_p)
-    sw_pths.append(sw_p)
-    rrt_pths.append(rrt_p)
+    #astar_pths.append(astar_p)
+    #naive_pths.append(naive_p)
+    #sw_pths.append(sw_p)
+    #rrt_pths.append(rrt_p)
+    #dstar = DStarLite(test_pt[0], test_pt[1], neighbors, node_list, network, costmap)
+    #dstar.compute_shortest_path()
+    #dstar_p = dstar.get_path()
+    #dstar_pths.append(dstar_p)
+
+    dstar_pths.append(dstar_plan(network, test_pt[0], test_pt[1]))
 
 
-pickle.dump(astar_pths, open("astar_pths.pkl", "wb"))
-pickle.dump(naive_pths, open("naive_pths.pkl", "wb"))
-pickle.dump(sw_pths, open("sw_pths.pkl", "wb"))
-pickle.dump(rrt_pths, open("rrt_pths.pkl", "wb"))
+#pickle.dump(astar_pths, open("astar_pths.pkl", "wb"))
+#pickle.dump(naive_pths, open("naive_pths.pkl", "wb"))
+#pickle.dump(sw_pths, open("sw_pths.pkl", "wb"))
+#pickle.dump(rrt_pths, open("rrt_pths.pkl", "wb"))
+pickle.dump(dstar_pths, open("dstar_pths.pkl", "wb"))
+#pickle.dump(astar_other_pths, open("astar_other_pths.pkl", "wb"))

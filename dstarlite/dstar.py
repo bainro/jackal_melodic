@@ -91,7 +91,12 @@ class DStarLite:
         self.s_last = self.s_start
         self.compute_shortest_path()
 
+        timeout = 0
+
         while self.s_start != self.s_goal:
+            timeout += 1
+            #if timeout > 100:
+            #    return None
             assert (self.rhs[self.s_start] != float('inf')), "There is no known path!"
 
             succ = self.neighbors[self.s_start]
@@ -129,6 +134,7 @@ class DStarLite:
 
             self.s_start = arg_min
             path.append(self.s_start)
+            #print(path)
 
         return path
             

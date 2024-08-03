@@ -11,6 +11,7 @@ from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import BoundaryNorm
 import matplotlib.image as mpimg
+from tqdm import tqdm
 
 
 
@@ -69,14 +70,24 @@ def plotAdaptive(self, costmap=0, image=None, title="Cost Map", path=None, color
             for cell in self.cells:
                 if cell.ID in p and cell.ID not in used:
                     used.append(cell.ID)
-                    ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms + 8, color=colorscale(i), zorder=5+i)
+                    #Make 2nd transparent
+                    if i == 2:
+                        ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms + 8, color=colorscale(i), zorder=5+i, alpha=0.5)
+                    else:
+                        ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms + 8, color=colorscale(i), zorder=5+i)
                 elif cell.ID in p and cell.ID in used:
-                    ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms + 5, color=colorscale(i), zorder=5+i)
+                    if i == 2:
+                        ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms + 5, color=colorscale(i), zorder=5+i, alpha=0.5)
+                    else:
+                        ax.plot(self.points[cell.ID][1], self.points[cell.ID][0], marker='o', ms=ms + 5, color=colorscale(i), zorder=5+i)
 
         #Path outlines
         for j, p in enumerate(path):
             for i in range(len(p) - 1):
-                ax.plot([self.points[p[i]][1], self.points[p[i+1]][1]], [self.points[p[i]][0], self.points[p[i+1]][0]],'o-', color=colorscale(j), zorder=5, linewidth=8.0)
+                if j == 2:
+                    ax.plot([self.points[p[i]][1], self.points[p[i+1]][1]], [self.points[p[i]][0], self.points[p[i+1]][0]],'o-', color=colorscale(j), zorder=5, linewidth=8.0, alpha=0.5)
+                else:
+                    ax.plot([self.points[p[i]][1], self.points[p[i+1]][1]], [self.points[p[i]][0], self.points[p[i+1]][0]],'o-', color=colorscale(j), zorder=5, linewidth=8.0)
 
     if obstacles is not None:
         for (u, v) in obstacles:
@@ -119,7 +130,7 @@ def find_matching_path(network):
         # Randomly select start and goal
         start = node_list[np.random.randint(0, len(node_list))]
         goal = node_list[np.random.randint(0, len(node_list))]
-        while(goal == start or euclidean_distance(start, goal) < 10):
+        while(goal == start or euclidean_distance(start, goal) < 3):
             start = node_list[np.random.randint(0, len(node_list))]
             goal = node_list[np.random.randint(0, len(node_list))]
             
@@ -131,14 +142,16 @@ def find_matching_path(network):
         sw_p = sw_p[::-1]
 
         if dstar_p == sw_p:
-            print("Found matching path")
-            print(start, goal)
-            return start, goal
+            #print("Found matching path")
+            return start, goal, dstar_p
         
     print("No matching path found")
+    return None, None
         
 def adaptive_swp(network, start, goal, obstacles, costmap = [0, 1, 4, 5]):
 
+
+    timeout = 0
     path_history = []
 
     costs = []
@@ -149,6 +162,9 @@ def adaptive_swp(network, start, goal, obstacles, costmap = [0, 1, 4, 5]):
     current_pos = start
     idx = 1
     while current_pos != goal:
+        timeout += 1
+        if timeout > 100:
+            return None, None
         p = sw_p[idx]
         curr_ID = network.points[current_pos]
         next_ID = network.points[p]
@@ -156,6 +172,7 @@ def adaptive_swp(network, start, goal, obstacles, costmap = [0, 1, 4, 5]):
         #print("Next pos:", p)
 
         if (current_pos, p) in obstacles:
+            #print("Obstacle detected at ", (current_pos, p))
             cost = network.cells[curr_ID].wgts[next_ID]
             cost[1] = 8.0
             costs.append(cost)
@@ -168,6 +185,7 @@ def adaptive_swp(network, start, goal, obstacles, costmap = [0, 1, 4, 5]):
             path_history.append(sw_p)
             #print("New path:", sw_p)
             idx = 1
+            
         else:
             costs.append(network.cells[curr_ID].wgts[next_ID])
             path.append(p)
@@ -176,10 +194,121 @@ def adaptive_swp(network, start, goal, obstacles, costmap = [0, 1, 4, 5]):
 
     return path, path_history
 
+def n_trials_random_obstacle(n, n_obstacles):
+    base_network = PlaceNetwork()
+    data = loadNetwork("../fixed_wgts")
+    base_network.loadFromFile(data)
+
+    costmap = base_network.normalizeWeights([0, 1, 4, 5])
+    neighbors = {base_network.points[cell.ID]: [base_network.points[neighbor.ID] for neighbor in cell.connections.values()] for cell in base_network.cells}
+    node_list = [base_network.points[cell.ID] for cell in base_network.cells]
+
+    used = []
+    d_star_total = 0
+    swp_total = 0
+    num_identical = 0
+    paths_total = 0
+
+    d_star_path_lengths = []
+    swp_path_lengths = []
+
+    while paths_total < n:
+        new_network = PlaceNetwork()
+        data = loadNetwork("../fixed_wgts")
+        new_network.loadFromFile(data)
+
+        print(f"Trial {paths_total + 1}/{n}")
+
+        start, goal, path = find_matching_path(new_network)
+        while (start, goal) in used:
+            #print("Found duplicate path")
+            start, goal, path = find_matching_path(new_network)
+        used.append((start, goal))
+
+        #print(f"Start: {start}, Goal: {goal}")
+
+        obstacle_placed = []
+        obs_idx = len(path) // 2
+        obs_loc = ((base_network.points[path[obs_idx]]), (base_network.points[path[obs_idx + 1]]))
+        obstacle_placed.append(obs_loc)
+        #for j in range(n_obstacles):
+            #Place random obstacle somewhere along path
+        #    obs_idx = np.random.randint(3, len(path) - 2)
+        #    obs_loc = ((base_network.points[path[obs_idx]]), (base_network.points[path[obs_idx + 1]]))
+            #while obs_loc in obstacle_placed:
+            #    obs_idx = np.random.randint(3, len(path) - 2)
+            #    obs_loc = ((base_network.points[path[obs_idx]]), (base_network.points[path[obs_idx + 1]]))
+            #obstacle_placed.append(obs_loc)
+
+        #print(f"Obstacles: {obstacle_placed}")
+
+        sw_p, swp_path_history = adaptive_swp(new_network, start, goal, obstacle_placed)
+        if sw_p is None:
+            continue
+        swp_path_history = [[base_network.points[p] for p in path] for path in swp_path_history]
+        sw_p = [base_network.points[p] for p in sw_p]
+
+        #print(f"D* | {start}, {goal}")
+        #print(f"Obstacles: {obstacle_placed}")
+
+        dstar = DStarLite(start, goal, neighbors, node_list, new_network, costmap)
+        if dstar is None:
+            continue
+        dstar_p = dstar.move_and_replan(start, obstacle_placed)
+        dstar_p = [base_network.points[p] for p in dstar_p]
+
+        #print("Finished")
+
+        d_star_total += get_total_cost(base_network, [0, 1, 4, 5], dstar_p)
+        swp_total += get_total_cost(base_network, [0, 1, 4, 5], sw_p)
+
+        #print("Got costs")
+
+        d_star_path_lengths.append(len(dstar_p))
+        swp_path_lengths.append(len(sw_p))
+
+        paths_total += 1
+        if dstar_p == sw_p:
+            num_identical += 1
+
+        if paths_total % 20 == 0:
+            plotAdaptive(base_network, costmap=[0, 1, 4, 5], image="../images/map/mapraw.jpg", title=None, path=[sw_p, dstar_p, path], obstacles=obstacle_placed)#, p1, p2])
+            # Specify line colors and labels
+            colors = ['tab:red', 'tab:blue','tab:green', 'yellow']
+            labels = ["SWP", "D*", 'Original Path', 'Placed Obstacles']
+            dummy_lines = [Line2D([0], [0], color=color, linewidth=2) for color in colors]
+            dummy_lines[-1] = Line2D([0], [0], marker='*', color='yellow', markersize=20, linestyle='None', markeredgecolor='black', markeredgewidth=2)
+            # Add legend with dummy lines and labels
+            plt.legend(dummy_lines, labels, bbox_to_anchor=(-3.0, 1.225), loc='upper right', fontsize=20)
+            plt.savefig(f"{paths_total}.png")
+            plt.close()
+
+
+    print("Mean D* path length:", np.mean(d_star_path_lengths))
+    print("Mean SWP path length:", np.mean(swp_path_lengths))
+    print("Mean D* path cost:", d_star_total / n)
+    print("Mean SWP path cost:", swp_total / n)
+
+    print("Number of trials:", paths_total)
+    print("Number of identical paths:", num_identical)
+
+    
+
+
 if __name__ == '__main__':
+
+    n_trials_random_obstacle(100, 1)
+    #n_trials_random_obstacle(1000, 2)
+    #n_trials_random_obstacle(1000, 3)
+    exit()
+
     network = PlaceNetwork()
     data = loadNetwork("../fixed_wgts")
     network.loadFromFile(data)
+
+    base_network = PlaceNetwork()
+    data = loadNetwork("../fixed_wgts")
+    base_network.loadFromFile(data)
 
     #start, goal = find_matching_path(network)
     #exit()
@@ -189,10 +318,10 @@ if __name__ == '__main__':
     neighbors = {network.points[cell.ID]: [network.points[neighbor.ID] for neighbor in cell.connections.values()] for cell in network.cells}
 
     node_list = [network.points[cell.ID] for cell in network.cells]
-    start = (5, 11)
-    goal = (15, 4)
+    start = (8, 6)#(5, 11)
+    goal = (2, 16)#(15, 4)
 
-    obstacle_placed = [((9, 8), (10, 8)), ((11, 8), (12, 7))]
+    obstacle_placed = [((3, 14), (2, 15))]#[((9, 8), (10, 8)), ((11, 8), (12, 7))]
 
     dstar = DStarLite(start, goal, neighbors, node_list, network, costmap)
     dstar_p = dstar.move_and_replan(start, obstacle_placed)
@@ -206,7 +335,7 @@ if __name__ == '__main__':
     print(get_total_cost(network, [0, 1, 4, 5], sw_p))
     print(get_total_cost(network, [0, 1, 4, 5], dstar_p))
 
-    plotAdaptive(network, costmap=[0, 1, 4, 5], image="../images/map/mapraw.jpg", title=None, path=[sw_p, dstar_p], obstacles=obstacle_placed)#, p1, p2])
+    plotAdaptive(base_network, costmap=[0, 1, 4, 5], image="../images/map/mapraw.jpg", title=None, path=[sw_p, dstar_p], obstacles=obstacle_placed)#, p1, p2])
     # Specify line colors and labels
     colors = ['tab:red', 'tab:blue', 'yellow']
     labels = ["SWP", "Dstar", 'Placed Obstacles']
